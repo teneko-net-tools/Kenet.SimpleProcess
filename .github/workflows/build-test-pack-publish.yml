@@ -37,9 +37,6 @@ env:
   MSBUILD_VERBOSITY: Minimal
   MSBUILD_CONFIGURATION: Release
   CACHE_ID: GITHUB_VERSION_CACHE
-  DOTNET_VERSION: |
-    "5.0.x"
-    "6.0.x"
   DRY_RUN: ${{ github.event.inputs.dry-run == 'true' && 'true' || 'false' }}
   PRE_BUILT_ARTIFACTS_NAME: "pre-built_artifacts"
   MSBUILD_INTEGRATION_NAME: Vernuntii.Console.MSBuild.Orphan
@@ -58,7 +55,12 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-version: "5.0.x"
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: "6.0.x"
 
       - run: dotnet tool install --global Vernuntii.Console.GlobalTool --version 0.1.0-alpha.10
 
