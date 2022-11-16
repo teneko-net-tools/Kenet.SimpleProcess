@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>netstandard2.0;net6.0</TargetFrameworks>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <Description>
+            A simple process trying to replace the bootstrap code of a native instance of System.Diagnostic.Process. Supports synchronous and asynchronous workflows.
+        </Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Teronis.DotNet.EditorConfig.Base" Version="0.3.0-alpha.4">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+    </ItemGroup>
+
+    <ItemGroup Condition="!$(DefineConstants.Contains('NET6_0_OR_GREATER'))">
+        <PackageReference Include="CommunityToolkit.HighPerformance" Version="8.0.0" />
+        <PackageReference Include="IndexRange" Version="1.0.2" />
+        <PackageReference Include="Nito.AsyncEx" Version="5.1.2" />
+        <PackageReference Include="System.Memory" Version="4.5.5" />
+        <PackageReference Include="Teronis.Nullable" Version="1.0.0">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+    </ItemGroup>
+
+</Project>
