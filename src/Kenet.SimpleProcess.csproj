@@ -11,18 +11,18 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="CommunityToolkit.HighPerformance" Version="8.0.0" />
         <PackageReference Include="Teronis.DotNet.EditorConfig.Base" Version="0.3.0-alpha.4">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
         <PackageReference Include="Vernuntii.Console.MSBuild" Version="0.1.0-alpha.10">
-          <PrivateAssets>all</PrivateAssets>
-          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
     </ItemGroup>
 
-    <ItemGroup Condition="!$(DefineConstants.Contains('NET5_0_OR_GREATER'))">
-        <PackageReference Include="CommunityToolkit.HighPerformance" Version="8.0.0" />
+    <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
         <PackageReference Include="IndexRange" Version="1.0.2" />
         <PackageReference Include="Nito.AsyncEx" Version="5.1.2" />
         <PackageReference Include="System.Memory" Version="4.5.5" />
