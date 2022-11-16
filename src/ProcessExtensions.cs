@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 
-#if !NET6_0_OR_GREATER
+#if !NET5_0_OR_GREATER
 using Nito.AsyncEx;
 #endif
 
@@ -10,14 +10,14 @@ internal static class ProcessExtensions
 {
     public static Task WaitForExitAsync(this Process process, CancellationToken cancellationToken)
     {
-#if NET6_0_OR_GREATER
+#if NET5_0_OR_GREATER
         return process.WaitForExitAsync(cancellationToken);
 #else
         return process.WaitForExitAsyncFallback(cancellationToken);
 #endif
     }
 
-#if !NET6_0_OR_GREATER
+#if !NET5_0_OR_GREATER
     public static async Task WaitForExitAsyncFallback(this Process process, CancellationToken cancellationToken)
     {
         if (!process.HasExited) {

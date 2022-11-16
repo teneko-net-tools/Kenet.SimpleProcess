@@ -1,11 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFrameworks>netstandard2.0;net6.0</TargetFrameworks>
+        <TargetFrameworks>netstandard2.0;net5.0;net6.0</TargetFrameworks>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <Description>
-            A simple process trying to replace the bootstrap code of a native instance of System.Diagnostic.Process. Supports synchronous and asynchronous workflows.
+            A simple process trying to replace the bootstrap code of a native instance of System.Diagnostic.Process.
+            Supports synchronous and asynchronous workflows. The support of .NET Standard 2.0 is the main goal of this library.
         </Description>
     </PropertyGroup>
 
@@ -20,7 +21,7 @@
         </PackageReference>
     </ItemGroup>
 
-    <ItemGroup Condition="!$(DefineConstants.Contains('NET6_0_OR_GREATER'))">
+    <ItemGroup Condition="!$(DefineConstants.Contains('NET5_0_OR_GREATER'))">
         <PackageReference Include="CommunityToolkit.HighPerformance" Version="8.0.0" />
         <PackageReference Include="IndexRange" Version="1.0.2" />
         <PackageReference Include="Nito.AsyncEx" Version="5.1.2" />
