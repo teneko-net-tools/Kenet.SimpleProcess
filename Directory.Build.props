@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <PropertyGroup>
+    <Authors Condition="'$(Authors)' == ''">Authors of Teneko .NET Tools</Authors>
+    <Copyright Condition="'$(Copyright)' == ''">Copyright (c) 2022 Authors of Teneko .NET Tools</Copyright>
+    <Product Condition="'$(Product)' == ''">$(MSBuildProjectName)</Product>
+    <PackageLicenseFile Condition="'$(PackageLicenseFile)' == ''">LICENSE</PackageLicenseFile>
+    <PackageIcon Condition="'$(PackageIcon)' == ''">icon.png</PackageIcon>
+    <LangVersion Condition="'$(LangVersion)' == ''">10.0</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+	<None Include="$(MSBuildThisFileDirectory)\LICENSE">
+		<Pack>True</Pack>
+		<PackagePath></PackagePath>
+	</None>
+
+	<None Include="$(MSBuildThisFileDirectory)\res\icon.png">
+		<Pack>True</Pack>
+		<PackagePath></PackagePath>
+	</None>
+</ItemGroup>
+
+	<!-- Dependencies -->
+	<ItemGroup>
+		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" Condition="$(IsPackable)" />
+		<PackageReference Include="Vernuntii.Console.MSBuild" Version="0.1.0-alpha.10" Condition="$(IsPackable)">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+	</ItemGroup>
+
+</Project>

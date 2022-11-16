@@ -8,15 +8,12 @@
             A simple process trying to replace the bootstrap code of a native instance of System.Diagnostic.Process.
             Supports synchronous and asynchronous workflows. The support of .NET Standard 2.0 is the main goal of this library.
         </Description>
+		<PackageTags>process</PackageTags>
     </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="CommunityToolkit.HighPerformance" Version="8.0.0" />
         <PackageReference Include="Teronis.DotNet.EditorConfig.Base" Version="0.3.0-alpha.4">
-            <PrivateAssets>all</PrivateAssets>
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-        </PackageReference>
-        <PackageReference Include="Vernuntii.Console.MSBuild" Version="0.1.0-alpha.10">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
