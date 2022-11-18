@@ -5,7 +5,7 @@ namespace Kenet.SimpleProcess;
 /// <summary>
 /// Represents the asynchronous process.
 /// </summary>
-public interface IAsyncSimpleProcess
+public interface IAsyncSimpleProcess : IDisposable
 {
     /// <inheritdoc cref="Process.Start()" />
     bool Start();
