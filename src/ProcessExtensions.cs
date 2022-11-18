@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-
 #if !NET5_0_OR_GREATER
 using Nito.AsyncEx;
 #endif
@@ -35,7 +34,12 @@ internal static class ProcessExtensions
         }
 
         var exitTaskSource = new TaskCompletionSource<object?>();
-        void OnExited(object? sender, EventArgs args) => exitTaskSource.TrySetResult(null);
+
+        void OnExited(object? sender, EventArgs args)
+        {
+            exitTaskSource.TrySetResult(null);
+        }
+
         process.Exited += OnExited;
 
         try {
