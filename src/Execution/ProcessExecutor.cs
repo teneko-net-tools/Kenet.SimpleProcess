@@ -59,7 +59,7 @@ internal class ProcessExecutor : IProcessExecutor, IAsyncProcessExecutor
         }
 
         var errorMessage = errorBuffer != null
-            ? (_artifact.ErrorEncoding ?? Encoding.UTF8).GetString(errorBuffer.WrittenMemory.GetArrayUnsafe())
+            ? (_artifact.ErrorEncoding ?? Encoding.UTF8).GetString(errorBuffer.WrittenMemory.GetArrayUnsafe(), 0, errorBuffer.WrittenCount)
             : null;
 
         throw new BadExitCodeException(errorMessage) { ExitCode = exitCode };
