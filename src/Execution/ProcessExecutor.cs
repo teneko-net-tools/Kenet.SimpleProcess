@@ -1,5 +1,4 @@
 ﻿using System.Buffers;
-using System.Collections.Immutable;
 using System.Text;
 using CommunityToolkit.HighPerformance.Buffers;
 
@@ -67,7 +66,7 @@ internal class ProcessExecutor : IProcessExecutor, IAsyncProcessExecutor
     }
 
     /// <inheritdoc />
-    public async Task<ProcessExecution> ExecuteAsync(CancellationToken cancellationToken)
+    public async Task<ProcessExecutionResult> ExecuteAsync(CancellationToken cancellationToken)
     {
         var errorBuffer = CreateErrorBuffer();
         var errorWriter = errorBuffer != null ? (WriteHandler)errorBuffer.Write : null;
@@ -77,7 +76,7 @@ internal class ProcessExecutor : IProcessExecutor, IAsyncProcessExecutor
             using var process = CreateProcess(errorWriter, cancellationToken);
             var exitCode = await process.WaitForExitAsync();
             CheckExitCode(exitCode, errorBuffer);
-            return new ProcessExecution(process, exitCode);
+            return new ProcessExecutionResult(process, exitCode);
         } finally {
             errorBuffer?.Dispose();
             cancellationTokenSource?.Dispose();
@@ -85,7 +84,7 @@ internal class ProcessExecutor : IProcessExecutor, IAsyncProcessExecutor
     }
 
     /// <inheritdoc />
-    public ProcessExecution Execute(CancellationToken cancellationToken)
+    public ProcessExecutionResult Execute(CancellationToken cancellationToken)
     {
         var errorBuffer = CreateErrorBuffer();
         var errorWriter = errorBuffer != null ? (WriteHandler)errorBuffer.Write : null;
@@ -95,7 +94,7 @@ internal class ProcessExecutor : IProcessExecutor, IAsyncProcessExecutor
             using var process = CreateProcess(errorWriter, cancellationToken);
             var exitCode = process.WaitForExit();
             CheckExitCode(exitCode, errorBuffer);
-            return new ProcessExecution(process, exitCode);
+            return new ProcessExecutionResult(process, exitCode);
         } finally {
             errorBuffer?.Dispose();
             cancellationTokenSource?.Dispose();

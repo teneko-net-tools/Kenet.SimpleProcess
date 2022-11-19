@@ -7,5 +7,5 @@ public interface IProcessExecutor
     /// </summary>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    ProcessExecution Execute(CancellationToken cancellationToken);
+    ProcessExecutionResult Execute(CancellationToken cancellationToken);
 }

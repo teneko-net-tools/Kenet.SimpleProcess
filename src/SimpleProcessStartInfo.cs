@@ -49,13 +49,10 @@ public record SimpleProcessStartInfo
         var executable = Executable;
         var arguments = Arguments;
         var workingDirectory = WorkingDirectory ?? string.Empty;
-        ProcessStartInfo processStartInfo;
 
-        if (arguments == null) {
-            processStartInfo = new ProcessStartInfo(executable) { WorkingDirectory = workingDirectory };
-        } else {
-            processStartInfo = new ProcessStartInfo(executable, arguments) { WorkingDirectory = workingDirectory };
-        }
+        var processStartInfo = arguments == null
+            ? new ProcessStartInfo(executable) { WorkingDirectory = workingDirectory }
+            : new ProcessStartInfo(executable, arguments) { WorkingDirectory = workingDirectory };
 
         if (EnvironmentVariables is not null) {
             foreach (var environmentVariable in EnvironmentVariables) {

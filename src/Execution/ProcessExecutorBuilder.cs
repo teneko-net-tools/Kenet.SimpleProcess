@@ -11,10 +11,18 @@ public sealed class ProcessExecutorBuilder : IProcessExecutorBuilder
     /// Creates a builder with error interpretation in case of a bad exit code.
     /// </summary>
     /// <param name="startInfo"></param>
+    /// <param name="exitCode"></param>
     /// <returns></returns>
-    public IProcessExecutorBuilder CreateDefault(SimpleProcessStartInfo startInfo) =>
-        new ProcessExecutorBuilder(startInfo)
-            .WithErrorInterpretation();
+    public static IProcessExecutorBuilder CreateDefault(SimpleProcessStartInfo startInfo, int exitCode) =>
+        new ProcessExecutorBuilder(startInfo).WithExitCode(exitCode).WithErrorInterpretation();
+
+    /// <summary>
+    /// Creates a builder with error interpretation in case the exit code is not equals zero.
+    /// </summary>
+    /// <param name="startInfo"></param>
+    /// <returns></returns>
+    public static IProcessExecutorBuilder CreateDefault(SimpleProcessStartInfo startInfo) =>
+        CreateDefault(startInfo, exitCode: 0);
 
     private readonly List<CancellationToken> _cancellationTokens = new();
     private readonly List<WriteHandler> _errorTracers = new();
@@ -22,15 +30,6 @@ public sealed class ProcessExecutorBuilder : IProcessExecutorBuilder
     private readonly SimpleProcessStartInfo _startInfo;
     private Encoding? _errorEncoding;
     private int? _expectedExitCode;
-
-    public ProcessExecutorBuilder(ProcessExecutorBuilder original)
-    {
-        _cancellationTokens = new List<CancellationToken>(original._cancellationTokens);
-        _errorTracers = new List<WriteHandler>(original._errorTracers);
-        _outputTracers = new List<WriteHandler>(original._outputTracers);
-        _startInfo = original._startInfo with { };
-        _expectedExitCode = original._expectedExitCode;
-    }
 
     /// <summary>
     /// Creates an instance of this type.
