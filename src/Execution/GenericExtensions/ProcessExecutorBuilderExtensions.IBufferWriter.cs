@@ -27,41 +27,41 @@ public static partial class ProcessExecutorBuilderExtensions
     }
 
     /// <summary>
-    /// Writes to <param name="memoryOwner" />. The memory MUST be released on your own!
+    /// Writes to <param name="bufferOwner" />. The buffer MUST be disposed on your own!
     /// </summary>
     /// <param name="builder"></param>
     /// <param name="readFrom"></param>
-    /// <param name="memoryOwner"></param>
+    /// <param name="bufferOwner"></param>
     /// <typeparam name="T"></typeparam>
     /// <returns></returns>
     public static T WriteTo<T>(
         this T builder,
         Func<T, Action<WriteHandler>> readFrom,
-        out IMemoryOwner<byte> memoryOwner)
+        out BufferOwner<byte> bufferOwner)
         where T : IProcessExecutorBuilder
     {
         var buffer = new ArrayPoolBufferWriter<byte>();
-        memoryOwner = buffer;
+        bufferOwner = new BufferOwner<byte>(buffer);
         readFrom(builder)(buffer.Write);
         return builder;
     }
 
     /// <summary>
-    /// Writes to <param name="memoryOwner" />. The memory MUST be released on your own!
+    /// Writes to <param name="bufferOwner" />. The buffer MUST be disposed on your own!
     /// </summary>
     /// <param name="builder"></param>
     /// <param name="readFrom"></param>
-    /// <param name="memoryOwner"></param>
+    /// <param name="bufferOwner"></param>
     /// <typeparam name="T"></typeparam>
     /// <returns></returns>
     public static T WriteTo<T>(
         this T builder,
         Func<T, Func<WriteHandler, object>> readFrom,
-        out IMemoryOwner<byte> memoryOwner)
+        out BufferOwner<byte> bufferOwner)
         where T : IProcessExecutorBuilder
     {
         var writerHandler = readFrom(builder);
         void WriteHandler(WriteHandler bytes) => _ = writerHandler(bytes);
-        return WriteTo(builder, _ => WriteHandler, out memoryOwner);
+        return WriteTo(builder, _ => WriteHandler, out bufferOwner);
     }
 }
