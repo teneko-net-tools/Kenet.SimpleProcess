@@ -1,6 +1,6 @@
 ﻿using System.Runtime.Serialization;
 
-namespace Kenet.SimpleProcess.Execution;
+namespace Kenet.SimpleProcess;
 
 /// <summary>
 /// An exception that indicates a bad exit code.

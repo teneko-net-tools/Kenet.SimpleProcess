@@ -4,17 +4,17 @@ namespace Kenet.SimpleProcess.Execution;
 
 internal class ProcessExecutorBuilderArtifact : IProcessExecutorBuilderArtifact
 {
-    public IReadOnlyList<CancellationToken> CancellationTokens { get; }
-    public IReadOnlyList<WriteHandler> ErrorWriters { get; }
-    public IReadOnlyList<WriteHandler> OutputWriters { get; }
+    public IReadOnlyCollection<CancellationToken> CancellationTokens { get; }
+    public IReadOnlyCollection<WriteHandler> ErrorWriters { get; }
+    public IReadOnlyCollection<WriteHandler> OutputWriters { get; }
     public SimpleProcessStartInfo StartInfo { get; }
     public Encoding? ErrorEncoding { get; }
     public int? ExpectedExitCode { get; }
 
     public ProcessExecutorBuilderArtifact(
-        IReadOnlyList<CancellationToken> cancellationTokens,
-        IReadOnlyList<WriteHandler> errorTracers,
-        IReadOnlyList<WriteHandler> outputTracers,
+        IReadOnlyCollection<CancellationToken> cancellationTokens,
+        IReadOnlyCollection<WriteHandler> errorTracers,
+        IReadOnlyCollection<WriteHandler> outputTracers,
         SimpleProcessStartInfo startInfo,
         Encoding? errorEncoding,
         int? expectedExitCode)

@@ -5,16 +5,10 @@ using System.Diagnostics.CodeAnalysis;
 namespace Kenet.SimpleProcess;
 
 /// <summary>
-/// Represents the handler to write incoming bytes. These bytes are only available during the invoke of
-/// <see cref="WriteHandler" />.
+/// A simple process trying to replace the bootstrap code of a native instance of <see cref="System.Diagnostics.Process" />
+/// .
 /// </summary>
-/// <param name="bytes"></param>
-public delegate void WriteHandler(ReadOnlySpan<byte> bytes);
-
-/// <summary>
-/// A simple process trying to replace the bootstrap code of a native instance of <see cref="Process" />.
-/// </summary>
-public sealed class SimpleProcess : ISimpleProcess, IAsyncSimpleProcess
+public sealed class SimpleProcess : IProcess, IAsyncProcess
 {
     private static async Task ReadStreamAsync(
         Stream source,
@@ -41,7 +35,7 @@ public sealed class SimpleProcess : ISimpleProcess, IAsyncSimpleProcess
     /// <summary>
     /// <see langword="true" /> if internal process has been started.
     /// </summary>
-    [MemberNotNullWhen(true, nameof(ReadOutputTask), nameof(ReadErrorTask))]
+    [MemberNotNullWhen(true, nameof(_readOutputTask), nameof(_readErrorTask))]
     public bool IsProcessStarted { get; private set; }
 
     /// <summary>
@@ -52,16 +46,16 @@ public sealed class SimpleProcess : ISimpleProcess, IAsyncSimpleProcess
     /// <summary>
     /// A token that gets cancelled when the process exits.
     /// </summary>
-    public CancellationToken ProcessExited { get; }
+    public CancellationToken Exited { get; }
 
-    internal CancellationToken UserRequestedCancellationToken { get; }
-    internal Task? ReadOutputTask { get; private set; }
-    internal Task? ReadErrorTask { get; private set; }
+    private readonly CancellationToken _userCancellationToken;
+    private Task? _readOutputTask;
+    private Task? _readErrorTask;
 
     private readonly WriteHandler? _errorWriter;
     private readonly WriteHandler? _outputWriter;
 
-    private readonly CancellationTokenSource _processExitedTokenSource;
+    private readonly CancellationTokenSource _processExitedSource;
     private readonly SimpleProcessStartInfo _processStartInfo;
     private readonly object _startProcessLock = new();
     private bool _isDisposed;
@@ -75,18 +69,18 @@ public sealed class SimpleProcess : ISimpleProcess, IAsyncSimpleProcess
     /// <param name="errorWriter">The buffer the process will write incoming error to.</param>
     /// <param name="cancellationToken"></param>
     /// <exception cref="ArgumentNullException"></exception>
-    internal SimpleProcess(
+    public SimpleProcess(
         SimpleProcessStartInfo startInfo,
         WriteHandler? outputWriter,
         WriteHandler? errorWriter,
         CancellationToken cancellationToken)
     {
-        UserRequestedCancellationToken = cancellationToken;
+        _userCancellationToken = cancellationToken;
         _processStartInfo = startInfo ?? throw new ArgumentNullException(nameof(startInfo));
         _outputWriter = outputWriter;
         _errorWriter = errorWriter;
-        _processExitedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        ProcessExited = _processExitedTokenSource.Token;
+        _processExitedSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        Exited = _processExitedSource.Token;
     }
 
     internal void CreateProcess(out Process process)
@@ -110,7 +104,7 @@ public sealed class SimpleProcess : ISimpleProcess, IAsyncSimpleProcess
         process = currentProcess!;
     }
 
-    [MemberNotNull(nameof(ReadOutputTask), nameof(ReadErrorTask))]
+    [MemberNotNull(nameof(_readOutputTask), nameof(_readErrorTask))]
     private void StartProcess(Process process)
     {
         // Try non-lock version
@@ -128,7 +122,7 @@ public sealed class SimpleProcess : ISimpleProcess, IAsyncSimpleProcess
             void OnProcessExited(object? sender, EventArgs e)
             {
                 process.Exited -= OnProcessExited;
-                _processExitedTokenSource.Cancel();
+                _processExitedSource.Cancel();
             }
 
             process.Exited += OnProcessExited;
@@ -136,17 +130,17 @@ public sealed class SimpleProcess : ISimpleProcess, IAsyncSimpleProcess
             IsProcessStartedSuccessfully = process.Start();
             IsProcessStarted = true;
 
-            ReadOutputTask = _outputWriter is not null
-                ? ReadStreamAsync(process.StandardOutput.BaseStream, _outputWriter, ProcessExited)
+            _readOutputTask = _outputWriter is not null
+                ? ReadStreamAsync(process.StandardOutput.BaseStream, _outputWriter, Exited)
                 : Task.CompletedTask;
 
-            ReadErrorTask = _errorWriter is not null
-                ? ReadStreamAsync(process.StandardError.BaseStream, _errorWriter, ProcessExited)
+            _readErrorTask = _errorWriter is not null
+                ? ReadStreamAsync(process.StandardError.BaseStream, _errorWriter, Exited)
                 : Task.CompletedTask;
         }
     }
 
-    /// <inheritdoc cref="ISimpleProcess.Start" />
+    /// <inheritdoc cref="IProcess.Start" />
     /// />
     public bool Start()
     {
@@ -163,11 +157,11 @@ public sealed class SimpleProcess : ISimpleProcess, IAsyncSimpleProcess
 
         // This produces potentially a never ending task, but should
         // end if the process exited.
-        var waitForExitTask = Task.Run(() => process.WaitForExit(), UserRequestedCancellationToken);
+        var waitForExitTask = Task.Run(() => process.WaitForExit(), _userCancellationToken);
 
         // This makes the assumption, that every await uses
         // ConfigureAwait(continueOnCapturedContext: false)
-        Task.WaitAll(new[] { waitForExitTask, ReadErrorTask, ReadErrorTask }, UserRequestedCancellationToken);
+        Task.WaitAll(new[] { waitForExitTask, _readErrorTask, _readErrorTask }, _userCancellationToken);
 
         // REMINDER: Do not kill the process if user has requested the
         // cancellation, because this is not scope of this method
@@ -181,9 +175,9 @@ public sealed class SimpleProcess : ISimpleProcess, IAsyncSimpleProcess
         StartProcess(process);
 
         await Task.WhenAll(
-                process.WaitForExitAsync(UserRequestedCancellationToken),
-                ReadOutputTask,
-                ReadErrorTask)
+                process.WaitForExitAsync(_userCancellationToken),
+                _readOutputTask,
+                _readErrorTask)
             .ConfigureAwait(false);
 
         return process.ExitCode;
@@ -197,7 +191,7 @@ public sealed class SimpleProcess : ISimpleProcess, IAsyncSimpleProcess
 
         if (disposing) {
             _process?.Dispose();
-            _processExitedTokenSource.Dispose();
+            _processExitedSource.Dispose();
         }
 
         _isDisposed = true;

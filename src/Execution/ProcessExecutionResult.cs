@@ -1,9 +1,9 @@
 ﻿namespace Kenet.SimpleProcess.Execution;
 
 /// <summary>
-/// The execution of the process.
+/// The execution result of the process.
 /// </summary>
-public sealed class ProcessExecution
+public sealed class ProcessExecutionResult
 {
     /// <summary>
     /// The exit code.
@@ -12,7 +12,7 @@ public sealed class ProcessExecution
 
     private readonly SimpleProcess _simpleProcess;
 
-    internal ProcessExecution(SimpleProcess simpleProcess, int exitCode)
+    internal ProcessExecutionResult(SimpleProcess simpleProcess, int exitCode)
     {
         ExitCode = exitCode;
         _simpleProcess = simpleProcess;

@@ -3,15 +3,15 @@ using CommunityToolkit.HighPerformance.Buffers;
 
 namespace Kenet.SimpleProcess.Execution.GenericExtensions;
 
-public static partial class ProcessExecutorBuilder
+public static partial class ProcessExecutorBuilderExtensions
 {
     public static T WriteTo<T>(
         this T builder,
-        Action<IProcessExecutorBuilder, WriteHandler> readFrom,
+        Func<T, Func<WriteHandler, object>> readFrom,
         IBufferWriter<byte> bufferWriter)
         where T : IProcessExecutorBuilder
     {
-        readFrom(builder, bufferWriter.Write);
+        _ = readFrom(builder)(bufferWriter.Write);
         return builder;
     }
 
@@ -25,13 +25,13 @@ public static partial class ProcessExecutorBuilder
     /// <returns></returns>
     public static T WriteTo<T>(
         this T builder,
-        Action<IProcessExecutorBuilder, WriteHandler> readFrom,
+        Func<T, Func<WriteHandler, object>> readFrom,
         out IMemoryOwner<byte> memoryOwner)
         where T : IProcessExecutorBuilder
     {
         var buffer = new ArrayPoolBufferWriter<byte>();
         memoryOwner = buffer;
-        readFrom(builder, buffer.Write);
+        _ = readFrom(builder)(buffer.Write);
         return builder;
     }
 }

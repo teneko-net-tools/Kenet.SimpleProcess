@@ -7,5 +7,5 @@ public interface IAsyncProcessExecutor
     /// </summary>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    Task<ProcessExecution> ExecuteAsync(CancellationToken cancellationToken);
+    Task<ProcessExecutionResult> ExecuteAsync(CancellationToken cancellationToken);
 }
