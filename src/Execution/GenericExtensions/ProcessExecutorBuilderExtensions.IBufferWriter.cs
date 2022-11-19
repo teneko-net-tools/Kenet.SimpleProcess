@@ -1,5 +1,6 @@
 ﻿using System.Buffers;
 using CommunityToolkit.HighPerformance.Buffers;
+using Kenet.SimpleProcess.Buffers;
 
 namespace Kenet.SimpleProcess.Execution.GenericExtensions;
 

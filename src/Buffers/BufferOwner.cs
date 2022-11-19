@@ -1,6 +1,6 @@
 ﻿using CommunityToolkit.HighPerformance.Buffers;
 
-namespace Kenet.SimpleProcess.Execution.GenericExtensions;
+namespace Kenet.SimpleProcess.Buffers;
 
 /// <summary>
 /// A delegable buffer.
