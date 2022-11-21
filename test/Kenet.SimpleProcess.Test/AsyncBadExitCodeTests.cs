@@ -20,21 +20,41 @@ namespace Kenet.SimpleProcess.Test
         }
 
         [Fact]
-        public async Task Second_default_execution_run_to_completion_should_throw_bad_exit_code_then_throw_invalid_operation()
+        public async Task Two_execution_run_to_completion_should_pass()
         {
-            ProcessExecution execution = ProcessExecutorBuilder.CreateDefault(CreateBadExitCodeLeadingProcessStartInfo()).Build().Run();
+            using var execution = new ProcessExecutorBuilder(CreateBadExitCodeLeadingProcessStartInfo()).Run();
+            (await execution.RunToCompletionAsync()).Should().NotBe(0);
+            (await execution.RunToCompletionAsync()).Should().NotBe(0);
+        }
+
+        [Fact]
+        public async Task Two_default_execution_run_to_completion_should_pass()
+        {
+            using var execution = ProcessExecutorBuilder.CreateDefault(CreateBadExitCodeLeadingProcessStartInfo()).Run();
 
             await execution.Awaiting(x => x.RunToCompletionAsync())
                  .Should().ThrowAsync<BadExitCodeException>();
 
-            await execution.Invoking(x => x.RunToCompletionAsync())
+            await execution.Awaiting(x => x.RunToCompletionAsync())
+                 .Should().ThrowAsync<BadExitCodeException>();
+        }
+
+        [Fact]
+        public async Task Two_default_execution_run_to_completion_should_throw_bad_exit_code_then_throw_invalid_operation()
+        {
+            using var execution = ProcessExecutorBuilder.CreateDefault(CreateBadExitCodeLeadingProcessStartInfo()).Run();
+
+            await execution.Awaiting(x => x.RunToCompletionAsync(ProcessCompletionOptions.DisposeOnFailure))
+                .Should().ThrowAsync<BadExitCodeException>();
+
+            await execution.Awaiting(x => x.RunToCompletionAsync())
                 .Should().ThrowAsync<InvalidOperationException>();
         }
 
         [Fact]
-        public async Task Second_default_execution_run_to_completion_should_return_exit_code_then_throw_invalid_operation()
+        public async Task Two_execution_run_to_completion_should_return_exit_code_then_throw_invalid_operation()
         {
-            ProcessExecution execution = new ProcessExecutorBuilder(CreateBadExitCodeLeadingProcessStartInfo()).Build().Run();
+            using var execution = new ProcessExecutorBuilder(CreateBadExitCodeLeadingProcessStartInfo()).Run();
             (await execution.RunToCompletionAsync(ProcessCompletionOptions.DisposeOnCompleted)).Should().NotBe(0);
 
             await execution.Awaiting(x => x.RunToCompletionAsync())
@@ -42,9 +62,9 @@ namespace Kenet.SimpleProcess.Test
         }
 
         [Fact]
-        public async Task Second_process_run_to_completion_should_return_exit_code_then_throw_invalid_operation()
+        public async Task Two_process_run_to_completion_should_return_exit_code_then_throw_invalid_operation()
         {
-            SimpleProcess process = new(CreateBadExitCodeLeadingProcessStartInfo());
+            using var process = new SimpleProcess(CreateBadExitCodeLeadingProcessStartInfo());
             (await process.RunToCompletionAsync(ProcessCompletionOptions.DisposeOnCompleted)).Should().NotBe(0);
 
             await process.Awaiting(x => x.RunToCompletionAsync())
