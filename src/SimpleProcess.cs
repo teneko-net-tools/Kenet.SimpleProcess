@@ -5,82 +5,96 @@ using System.Diagnostics.CodeAnalysis;
 namespace Kenet.SimpleProcess;
 
 /// <summary>
-/// A simple process trying to replace the bootstrap code of a native instance of <see cref="System.Diagnostics.Process" />
-/// .
+/// A simple process trying to replace the bootstrap code of a native instance of <see cref="Process"/>.
 /// </summary>
-public sealed class SimpleProcess : IProcess, IAsyncProcess
+public sealed class SimpleProcess : IProcessExecution, IAsyncProcessExecution, IRunnable<IProcessExecution>, IRunnable<IAsyncProcessExecution>
 {
     private static async Task ReadStreamAsync(
         Stream source,
         WriteHandler writeNextBytes,
         CancellationToken cancellationToken)
     {
-        var lastWrittenBytesCount = -1;
-
         try {
-            while (!(cancellationToken.IsCancellationRequested && lastWrittenBytesCount == 0)) {
+            tryReadNext:
+
+            if (cancellationToken.IsCancellationRequested) {
+                WriteEOF();
+                return;
+            }
+
+            {
                 using var memoryOwner = MemoryPool<byte>.Shared.Rent(1024 * 4);
-                lastWrittenBytesCount =
-                    await source.ReadAsync(memoryOwner.Memory, cancellationToken).ConfigureAwait(false);
+                var lastWrittenBytesCount = await source.ReadAsync(memoryOwner.Memory, cancellationToken).ConfigureAwait(false);
 
                 if (lastWrittenBytesCount != 0) {
                     writeNextBytes(memoryOwner.Memory.Span[..lastWrittenBytesCount]);
+                    goto tryReadNext;
                 }
+
+                WriteEOF();
             }
-        } catch (OperationCanceledException) {
-            // This should not be handled here
+        } catch (OperationCanceledException error) when (error.CancellationToken.Equals(cancellationToken)) {
+            WriteEOF(); // We canceled ReadAsync ourselves, so we safely can write EOF
         }
+
+        void WriteEOF() => writeNextBytes(ReadOnlySpan<byte>.Empty);
     }
 
+    public SimpleProcessStartInfo StartInfo { get; }
+
     /// <summary>
-    /// <see langword="true" /> if internal process has been started.
+    /// The buffer the process will write incoming error to.
     /// </summary>
+    public WriteHandler? ErrorWriter { get; init; }
+
+    /// <summary>
+    /// The buffer the process will write incoming output to.
+    /// </summary>
+    public WriteHandler? OutputWriter { get; init; }
+
+    /// <inheritdoc/>
     [MemberNotNullWhen(true, nameof(_readOutputTask), nameof(_readErrorTask))]
     public bool IsProcessStarted { get; private set; }
 
-    /// <summary>
-    /// <see langword="true" /> if internal process has been started successfully.
-    /// </summary>
-    public bool IsProcessStartedSuccessfully { get; private set; }
-
-    /// <summary>
-    /// A token that gets cancelled when the process exits.
-    /// </summary>
+    /// <inheritdoc/>
     public CancellationToken Exited { get; }
+
+    /// <inheritdoc/>
+    public bool IsExited { get; private set; }
 
     private readonly CancellationToken _userCancellationToken;
     private Task? _readOutputTask;
     private Task? _readErrorTask;
 
-    private readonly WriteHandler? _errorWriter;
-    private readonly WriteHandler? _outputWriter;
-
     private readonly CancellationTokenSource _processExitedSource;
-    private readonly SimpleProcessStartInfo _processStartInfo;
     private readonly object _startProcessLock = new();
-    private bool _isDisposed;
     private Process? _process;
+    private int _exitCode;
+    private int _isDisposed;
 
     /// <summary>
     /// Creates an instance of this type.
     /// </summary>
     /// <param name="startInfo"></param>
-    /// <param name="outputWriter">The buffer the process will write incoming output to.</param>
-    /// <param name="errorWriter">The buffer the process will write incoming error to.</param>
     /// <param name="cancellationToken"></param>
     /// <exception cref="ArgumentNullException"></exception>
-    public SimpleProcess(
-        SimpleProcessStartInfo startInfo,
-        WriteHandler? outputWriter,
-        WriteHandler? errorWriter,
-        CancellationToken cancellationToken)
+    public SimpleProcess(SimpleProcessStartInfo startInfo, CancellationToken cancellationToken)
     {
         _userCancellationToken = cancellationToken;
-        _processStartInfo = startInfo ?? throw new ArgumentNullException(nameof(startInfo));
-        _outputWriter = outputWriter;
-        _errorWriter = errorWriter;
-        _processExitedSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        StartInfo = startInfo ?? throw new ArgumentNullException(nameof(startInfo));
+
+        if (cancellationToken.CanBeCanceled) {
+            _processExitedSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        } else {
+            _processExitedSource = new CancellationTokenSource();
+        }
+
         Exited = _processExitedSource.Token;
+    }
+
+    public SimpleProcess(SimpleProcessStartInfo startInfo)
+        : this(startInfo, CancellationToken.None)
+    {
     }
 
     internal void CreateProcess(out Process process)
@@ -92,7 +106,7 @@ public sealed class SimpleProcess : IProcess, IAsyncProcess
             return;
         }
 
-        var newProcess = new Process { StartInfo = _processStartInfo.CreateProcessStartInfo() };
+        var newProcess = new Process { StartInfo = StartInfo.CreateProcessStartInfo() };
 
         if (Interlocked.CompareExchange(ref _process, newProcess, null) == null) {
             process = newProcess;
@@ -122,70 +136,208 @@ public sealed class SimpleProcess : IProcess, IAsyncProcess
             void OnProcessExited(object? sender, EventArgs e)
             {
                 process.Exited -= OnProcessExited;
+                IsExited = true;
+                _exitCode = process.ExitCode;
                 _processExitedSource.Cancel();
             }
 
             process.Exited += OnProcessExited;
 
-            IsProcessStartedSuccessfully = process.Start();
+            if (!process.Start()) {
+                throw new ProcessReuseException("Process reuse is not supported");
+            }
+
             IsProcessStarted = true;
 
-            _readOutputTask = _outputWriter is not null
-                ? ReadStreamAsync(process.StandardOutput.BaseStream, _outputWriter, Exited)
+            _readOutputTask = OutputWriter is not null
+                ? ReadStreamAsync(process.StandardOutput.BaseStream, OutputWriter, Exited)
                 : Task.CompletedTask;
 
-            _readErrorTask = _errorWriter is not null
-                ? ReadStreamAsync(process.StandardError.BaseStream, _errorWriter, Exited)
+            _readErrorTask = ErrorWriter is not null
+                ? ReadStreamAsync(process.StandardError.BaseStream, ErrorWriter, Exited)
                 : Task.CompletedTask;
         }
     }
 
-    /// <inheritdoc cref="IProcess.Start" />
-    /// />
-    public bool Start()
+    [MemberNotNull(nameof(_readOutputTask), nameof(_readErrorTask))]
+    private void Run(out Process process)
     {
-        CreateProcess(out var process);
+        CreateProcess(out process);
         StartProcess(process);
-        return IsProcessStartedSuccessfully;
     }
 
-    /// <inheritdoc />
-    public int WaitForExit()
+    /// <summary>
+    /// Runs the process.
+    /// </summary>
+    public void Run() =>
+        Run(out _);
+
+    IProcessExecution IRunnable<IProcessExecution>.Run()
     {
-        CreateProcess(out var process);
-        StartProcess(process);
+        Run();
+        return this;
+    }
 
-        // This produces potentially a never ending task, but should
-        // end if the process exited.
-        var waitForExitTask = Task.Run(() => process.WaitForExit(), _userCancellationToken);
+    IAsyncProcessExecution IRunnable<IAsyncProcessExecution>.Run()
+    {
+        Run();
+        return this;
+    }
 
-        // This makes the assumption, that every await uses
-        // ConfigureAwait(continueOnCapturedContext: false)
-        Task.WaitAll(new[] { waitForExitTask, _readErrorTask, _readErrorTask }, _userCancellationToken);
+    private CancellationTokenSource? CreateUserCancellationTokenSource(CancellationToken additionalCancellationToken, out CancellationToken cancellationToken)
+    {
+        if (!additionalCancellationToken.CanBeCanceled) {
+            cancellationToken = _userCancellationToken;
+            return null;
+        }
+
+        var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_userCancellationToken, additionalCancellationToken);
+        cancellationToken = cancellationTokenSource.Token;
+        return cancellationTokenSource;
+    }
+
+    private static bool CancellationTokenIsAssociatedWithError(Exception error, CancellationToken cancellationToken)
+    {
+        if (!cancellationToken.CanBeCanceled) {
+            return false;
+        }
+
+        if (error is not OperationCanceledException operationCanceledError) {
+            return false;
+        }
+
+        var isTokenWithErrorAssociated = false;
+        Disposable.TryDisposeInstance(cancellationToken.Register(() => isTokenWithErrorAssociated = true));
+        return isTokenWithErrorAssociated;
+    }
+
+    private void HandleRunToCompletionSuccess(ProcessCompletionOptions completionOptions)
+    {
+        if (completionOptions.HasFlag(ProcessCompletionOptions.DisposeOnCompleted)) {
+            Dispose();
+        }
+    }
+
+    private void HandleRunToCompletionFailure(
+        ref Exception error,
+        CancellationToken methodScopedCancellationToken,
+        ProcessCompletionOptions completionOptions)
+    {
+        if (error is AggregateException aggregateError && aggregateError.InnerExceptions.Count == 1) {
+            error = aggregateError.InnerExceptions[0];
+        }
+
+        if (completionOptions != ProcessCompletionOptions.None && CancellationTokenIsAssociatedWithError(error, methodScopedCancellationToken)) {
+            if (completionOptions.HasFlag(ProcessCompletionOptions.KillTreeOnCancellationRequested)) {
+                Kill(entireProcessTree: true);
+            } else if (completionOptions.HasFlag(ProcessCompletionOptions.KillOnCancellationRequested)) {
+                Kill();
+            }
+        }
+
+        if (completionOptions.HasFlag(ProcessCompletionOptions.DisposeOnFailure)) {
+            Exited.Register(Dispose);
+        }
+    }
+
+    /// <inheritdoc/>
+    public int RunToCompletion(CancellationToken cancellationToken, ProcessCompletionOptions completionOptions)
+    {
+        Run(out var process);
+        var userCancellationTokenSource = CreateUserCancellationTokenSource(cancellationToken, out var userCancellationToken);
+
+        try {
+            // This produces potentially a never ending task, but should
+            // end if the process exited.
+            var waitForExitTask = Task.Run(process.WaitForExit, userCancellationToken);
+
+            // This makes the assumption, that every await uses
+            // ConfigureAwait(continueOnCapturedContext: false)
+            Task.WaitAll(new[] { waitForExitTask, _readErrorTask, _readErrorTask }, userCancellationToken);
+            HandleRunToCompletionSuccess(completionOptions);
+        } catch (Exception error) {
+            HandleRunToCompletionFailure(ref error, cancellationToken, completionOptions);
+            throw;
+        } finally {
+            userCancellationTokenSource?.Dispose();
+        }
 
         // REMINDER: Do not kill the process if user has requested the
         // cancellation, because this is not scope of this method
-        return process.ExitCode;
+        return _exitCode;
     }
 
-    /// <inheritdoc />
-    public async Task<int> WaitForExitAsync()
+    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletion(IProcessExecution, CancellationToken)"/>
+    public int RunToCompletion(CancellationToken cancellationToken = default) =>
+        RunToCompletion(cancellationToken, ProcessCompletionOptions.None);
+
+    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletion(IProcessExecution, ProcessCompletionOptions)"/>
+    public int RunToCompletion(ProcessCompletionOptions completionOptions) =>
+        RunToCompletion(CancellationToken.None, completionOptions);
+
+    /// <inheritdoc/>
+    public async Task<int> RunToCompletionAsync(CancellationToken cancellationToken, ProcessCompletionOptions completionOptions)
     {
-        CreateProcess(out var process);
-        StartProcess(process);
+        Run(out var process);
+        var userCancellationTokenSource = CreateUserCancellationTokenSource(cancellationToken, out var userCancellationToken);
 
-        await Task.WhenAll(
-                process.WaitForExitAsync(_userCancellationToken),
-                _readOutputTask,
-                _readErrorTask)
-            .ConfigureAwait(false);
+        try {
+            await Task.WhenAll(
+                    process.WaitForExitAsync(userCancellationToken),
+                    _readOutputTask,
+                    _readErrorTask)
+                .ConfigureAwait(false);
 
-        return process.ExitCode;
+            HandleRunToCompletionSuccess(completionOptions);
+        } catch (Exception error) {
+            HandleRunToCompletionFailure(ref error, cancellationToken, completionOptions);
+            throw;
+        } finally {
+            userCancellationTokenSource?.Dispose();
+        }
+
+        return _exitCode;
+    }
+
+    /// <inheritdoc cref="AsyncProcessExecutionExtensions.RunToCompletionAsync(IAsyncProcessExecution, CancellationToken)"/>
+    public Task<int> RunToCompletionAsync(CancellationToken cancellationToken = default) =>
+        RunToCompletionAsync(cancellationToken, ProcessCompletionOptions.None);
+
+    /// <inheritdoc cref="AsyncProcessExecutionExtensions.RunToCompletionAsync(IAsyncProcessExecution, ProcessCompletionOptions)"/>
+    public Task<int> RunToCompletionAsync(ProcessCompletionOptions completionOptions) =>
+        RunToCompletionAsync(CancellationToken.None, completionOptions);
+
+    [MemberNotNull(nameof(_process))]
+    private void CheckProcessStarted()
+    {
+        if (_process is null) {
+            throw new InvalidOperationException("The process have not been started yet");
+        }
+    }
+
+    /// <inheritdoc/>
+    /// <exception cref="InvalidOperationException">The process have not been started yet.</exception>
+    public void Kill()
+    {
+        CheckProcessStarted();
+        _process.Kill();
+    }
+
+    /// <inheritdoc/>
+    /// <exception cref="InvalidOperationException">The process have not been started yet.</exception>
+    public void Kill(bool entireProcessTree)
+    {
+        CheckProcessStarted();
+#if NET5_0_OR_GREATER
+        _process.Kill(entireProcessTree);
+#else
+        _process.KillTree();
+#endif
     }
 
     private void Dispose(bool disposing)
     {
-        if (_isDisposed) {
+        if (Interlocked.CompareExchange(ref _isDisposed, 1, 0) == 1) {
             return;
         }
 
@@ -193,11 +345,9 @@ public sealed class SimpleProcess : IProcess, IAsyncProcess
             _process?.Dispose();
             _processExitedSource.Dispose();
         }
-
-        _isDisposed = true;
     }
 
-    /// <inheritdoc />
+    /// <inheritdoc/>
     public void Dispose()
     {
         Dispose(true);

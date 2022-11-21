@@ -8,6 +8,7 @@
         <PackageLicenseFile Condition="'$(PackageLicenseFile)' == ''">LICENSE</PackageLicenseFile>
         <PackageIcon Condition="'$(PackageIcon)' == ''">icon.png</PackageIcon>
         <LangVersion Condition="'$(LangVersion)' == ''">10.0</LangVersion>
+        <RepositoryUrl>https://github.com/teneko-net-tools/Kenet.SimpleProcess</RepositoryUrl>
     </PropertyGroup>
 
     <ItemGroup>

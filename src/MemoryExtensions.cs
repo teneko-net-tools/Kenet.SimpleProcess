@@ -1,15 +1,15 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace Kenet.SimpleProcess.Execution;
+namespace Kenet.SimpleProcess;
 
-internal static class MemoryMarshalExtensions
+internal static class MemoryExtensions
 {
     /// <summary>
     /// Gets the underlying array of memory.
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="memory"></param>
-    /// <remarks>Assumes that memory consists of only a single array.</remarks>
+    /// <remarks>Assumes that the memory consists of <b>one single array</b>.</remarks>
     /// <returns>The single array of the memory.</returns>
     /// <exception cref="InvalidOperationException"></exception>
     public static T[] GetArrayUnsafe<T>(this ReadOnlyMemory<T> memory)

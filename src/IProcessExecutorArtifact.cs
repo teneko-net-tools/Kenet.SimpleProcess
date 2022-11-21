@@ -1,13 +1,13 @@
 ﻿using System.Text;
 
-namespace Kenet.SimpleProcess.Execution;
+namespace Kenet.SimpleProcess;
 
-public interface IProcessExecutorBuilderArtifact
+public interface IProcessExecutorArtifact
 {
+    SimpleProcessStartInfo StartInfo { get; }
     IReadOnlyCollection<CancellationToken> CancellationTokens { get; }
     IReadOnlyCollection<WriteHandler> ErrorWriters { get; }
     IReadOnlyCollection<WriteHandler> OutputWriters { get; }
-    SimpleProcessStartInfo StartInfo { get; }
-    Encoding? ErrorEncoding { get; }
-    int? ExpectedExitCode { get; }
+    Encoding? ExitErrorEncoding { get; }
+    Func<int, bool>? ValidateExitCode { get; }
 }

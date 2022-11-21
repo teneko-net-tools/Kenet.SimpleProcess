@@ -1,11 +1,10 @@
-﻿using System.Diagnostics;
-#if !NET5_0_OR_GREATER
+﻿#if !NET5_0_OR_GREATER
 using Nito.AsyncEx;
 #endif
 
 namespace Kenet.SimpleProcess;
 
-internal static class ProcessExtensions
+internal static partial class ProcessExtensions
 {
     public static Task WaitForExitAsync(this System.Diagnostics.Process process, CancellationToken cancellationToken)
     {

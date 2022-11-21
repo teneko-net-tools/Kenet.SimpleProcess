@@ -1,51 +1,51 @@
-﻿namespace Kenet.SimpleProcess.Execution.GenericExtensions;
+﻿namespace Kenet.SimpleProcess;
 
-public static partial class ProcessExecutorBuilderExtensions
+public static partial class ProcessExecutorBuilderGenericExtensions
 {
     public static T WriteTo<T>(
-        this T builder,
+        this T mutator,
         Func<T, Action<WriteHandler>> readFrom,
         Memory<byte> memory,
         int startIndex)
-        where T : IProcessExecutorBuilder
+        where T : IProcessExecutorMutator
     {
         var writtenBytes = startIndex;
 
-        readFrom(builder)(bytes => {
+        readFrom(mutator)(bytes => {
             bytes.CopyTo(memory.Span.Slice(writtenBytes, bytes.Length));
             checked { writtenBytes += bytes.Length; }
         });
 
-        return builder;
+        return mutator;
     }
 
     public static T WriteTo<T>(
-        this T builder,
+        this T mutator,
         Func<T, Func<WriteHandler, object>> readFrom,
         Memory<byte> memory,
         int startIndex)
-        where T : IProcessExecutorBuilder
+        where T : IProcessExecutorMutator
     {
-        var writerHandler = readFrom(builder);
+        var writerHandler = readFrom(mutator);
         void WriteHandler(WriteHandler bytes) => _ = writerHandler(bytes);
-        return WriteTo(builder, _ => WriteHandler, memory, startIndex);
+        return WriteTo(mutator, _ => WriteHandler, memory, startIndex);
     }
 
     public static T WriteTo<T>(
-        this T builder,
+        this T mutator,
         Func<T, Action<WriteHandler>> readFrom,
         Memory<byte> memory)
-        where T : IProcessExecutorBuilder =>
-        builder.WriteTo(readFrom, memory, startIndex: 0);
+        where T : IProcessExecutorMutator =>
+        mutator.WriteTo(readFrom, memory, startIndex: 0);
 
     public static T WriteTo<T>(
-        this T builder,
+        this T mutator,
         Func<T, Func<WriteHandler, object>> readFrom,
         Memory<byte> memory)
-        where T : IProcessExecutorBuilder
+        where T : IProcessExecutorMutator
     {
-        var writerHandler = readFrom(builder);
+        var writerHandler = readFrom(mutator);
         void WriteHandler(WriteHandler bytes) => _ = writerHandler(bytes);
-        return WriteTo(builder, _ => WriteHandler, memory);
+        return WriteTo(mutator, _ => WriteHandler, memory);
     }
 }

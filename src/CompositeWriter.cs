@@ -1,4 +1,4 @@
-﻿namespace Kenet.SimpleProcess.Execution;
+﻿namespace Kenet.SimpleProcess;
 
 internal class CompositeWriter
 {
