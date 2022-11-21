@@ -9,6 +9,8 @@ namespace Kenet.SimpleProcess;
 /// </summary>
 public sealed class SimpleProcess : IProcessExecution, IAsyncProcessExecution, IRunnable<IProcessExecution>, IRunnable<IAsyncProcessExecution>
 {
+    private static readonly TimeSpan _defaultKillTreeTimeout = TimeSpan.FromSeconds(10);
+
     private static async Task ReadStreamAsync(
         Stream source,
         WriteHandler writeNextBytes,
@@ -66,6 +68,7 @@ public sealed class SimpleProcess : IProcessExecution, IAsyncProcessExecution, I
     private Task? _readOutputTask;
     private Task? _readErrorTask;
 
+    //private readonly IDisposable? _killWhenUserCancellationRequested;
     private readonly CancellationTokenSource _processExitedSource;
     private readonly object _startProcessLock = new();
     private Process? _process;
@@ -83,8 +86,12 @@ public sealed class SimpleProcess : IProcessExecution, IAsyncProcessExecution, I
         _userCancellationToken = cancellationToken;
         StartInfo = startInfo ?? throw new ArgumentNullException(nameof(startInfo));
 
-        if (cancellationToken.CanBeCanceled) {
+        if (_userCancellationToken.CanBeCanceled) {
+            // ISSUE: User cancellation token leads to cancellation of _processExitedSource but
+            // how should the process been treated (before/after run)? Kill?
             _processExitedSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            // TODO: Make user cancellation token useful
+            //_killWhenUserCancellationRequested = cancellationToken.Register(() => Kill(entireProcessTree: true));
         } else {
             _processExitedSource = new CancellationTokenSource();
         }
@@ -329,9 +336,11 @@ public sealed class SimpleProcess : IProcessExecution, IAsyncProcessExecution, I
     {
         CheckProcessStarted();
 #if NET5_0_OR_GREATER
+        // ISSUE: This acts asynchronous, whereby KillTree acts synchronously
         _process.Kill(entireProcessTree);
 #else
-        _process.KillTree();
+        // https://unix.stackexchange.com/a/124148
+        _process.KillTree(_defaultKillTreeTimeout);
 #endif
     }
 
@@ -341,10 +350,13 @@ public sealed class SimpleProcess : IProcessExecution, IAsyncProcessExecution, I
             return;
         }
 
-        if (disposing) {
-            _process?.Dispose();
-            _processExitedSource.Dispose();
+        if (!disposing) {
+            return;
         }
+
+        _process?.Dispose();
+        _processExitedSource.Dispose();
+        //_killWhenUserCancellationRequested?.Dispose();
     }
 
     /// <inheritdoc/>

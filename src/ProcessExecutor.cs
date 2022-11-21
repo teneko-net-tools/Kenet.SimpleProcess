@@ -10,6 +10,7 @@ public sealed class ProcessExecutor : IRunnable<IProcessExecution>, IRunnable<IA
     public ProcessExecutor(IProcessExecutorArtifact artifact) =>
         _artifact = artifact ?? throw new ArgumentNullException(nameof(artifact));
 
+    /// <inheritdoc cref="SimpleProcess.Run()"/>
     public ProcessExecution Run()
     {
         var execution = ProcessExecution.Create(_artifact);

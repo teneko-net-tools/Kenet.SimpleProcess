@@ -51,9 +51,9 @@ public sealed class ProcessExecutorBuilder : IProcessExecutorBuilder, IProcessEx
     public ProcessExecutorBuilder(SimpleProcessStartInfo startInfo) =>
         _startInfo = startInfo;
 
-    public ProcessExecutorBuilder WithExitCode(Func<int, bool> validate)
+    public ProcessExecutorBuilder WithExitCode(Func<int, bool> validator)
     {
-        _validateExitCode = validate;
+        _validateExitCode = validator;
         return this;
     }
 
@@ -108,7 +108,7 @@ public sealed class ProcessExecutorBuilder : IProcessExecutorBuilder, IProcessEx
         BuildArtifact();
 
     /// <summary>
-    /// Runs the process with the snapshot of current configuration you made by the builder.
+    /// Runs the process with the current design of a process executor.
     /// </summary>
     /// <returns></returns>
     public ProcessExecution Run()

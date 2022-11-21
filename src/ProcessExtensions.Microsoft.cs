@@ -10,10 +10,6 @@ namespace Kenet.SimpleProcess;
 internal partial class ProcessExtensions
 {
     private static readonly bool _isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
-    private static readonly TimeSpan _defaultTimeout = TimeSpan.FromSeconds(10);
-
-    internal static void KillTree(this Process process) =>
-        process.KillTree(_defaultTimeout);
 
     internal static void KillTree(this Process process, TimeSpan timeout)
     {

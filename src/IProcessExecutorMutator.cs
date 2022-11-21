@@ -2,14 +2,17 @@
 
 namespace Kenet.SimpleProcess;
 
+/// <summary>
+/// Enables you to design a process executor with the most basic features.
+/// </summary>
 public interface IProcessExecutorMutator
 {
     /// <summary>
-    /// If used, the process exit code will be checked against <paramref name="validExitCode" /> and throw
+    /// If used, the process exit code will be checked against <paramref name="validator" /> and throw
     /// <see cref="BadExitCodeException" /> on mismatch.
     /// </summary>
-    /// <param name="validExitCode"></param>
-    IProcessExecutorMutator WithExitCode(Func<int, bool> validate);
+    /// <param name="validator"></param>
+    IProcessExecutorMutator WithExitCode(Func<int, bool> validator);
 
     /// <summary>
     /// Allows the interpretation of the error stream. The interpreted error is only used in case of a bad exit code.

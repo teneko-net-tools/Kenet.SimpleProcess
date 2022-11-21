@@ -6,6 +6,9 @@ using CommunityToolkit.HighPerformance.Buffers;
 
 namespace Kenet.SimpleProcess;
 
+/// <summary>
+/// Represents 
+/// </summary>
 public sealed class ProcessExecution : IProcessExecution, IAsyncProcessExecution
 {
     internal static ProcessExecution Create(IProcessExecutorArtifact artifact)
@@ -65,9 +68,11 @@ public sealed class ProcessExecution : IProcessExecution, IAsyncProcessExecution
         }
     }
 
+    /// <inheritdoc/>
     public CancellationToken Exited =>
         _process.Exited;
 
+    /// <inheritdoc/>
     public bool IsExited =>
         _process.IsExited;
 

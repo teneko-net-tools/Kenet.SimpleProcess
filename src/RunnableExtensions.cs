@@ -13,8 +13,9 @@ public static class RunnableExtensions
 
     /// <summary>
     /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletion(IProcessExecution, CancellationToken)" path="/summary"/>
-    /// Because this method hides <see cref="IProcessExecution"/> implictly, you won't be able to dispose it on your own, so we pass
-    /// <see cref="ProcessCompletionOptions.DisposeOnCompleted"/> and <see cref="ProcessCompletionOptions.KillTreeOnCancellationRequested"/> by default.
+    /// Because this method hides <see cref="IProcessExecution"/>, you won't be able to dispose it on your own, so we pass
+    /// <see cref="ProcessCompletionOptions.DisposeOnCompleted"/>, <see cref="ProcessCompletionOptions.DisposeOnFailure"/> and
+    /// <see cref="ProcessCompletionOptions.KillTreeOnCancellationRequested"/> by default.
     /// </summary>
     /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletion(IProcessExecution, CancellationToken)"/>
     public static int RunToCompletion(this IRunnable<IProcessExecution> process, CancellationToken cancellationToken = default) =>
