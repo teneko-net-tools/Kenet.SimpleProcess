@@ -104,8 +104,7 @@ public sealed class ProcessExecution : IProcessExecution, IAsyncProcessExecution
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private bool IsDisposed() => _isDisposed == 1;
 
-    /// <inheritdoc/>
-    public void Run() =>
+    internal void Run() =>
          _process.Run();
 
     private void CheckExitCode(int exitCode)
@@ -159,7 +158,7 @@ public sealed class ProcessExecution : IProcessExecution, IAsyncProcessExecution
     {
         var previousDisposeOnExit = Interlocked.Exchange(ref _disposeWhenProcessExited, null);
         reenable = previousDisposeOnExit != null;
-        Disposable.TryDisposeInstance(previousDisposeOnExit);
+        ProcessBoundary.DisposeOrFailSilently(previousDisposeOnExit);
     }
 
     private void EnableDisposeOnExit()
@@ -180,7 +179,7 @@ public sealed class ProcessExecution : IProcessExecution, IAsyncProcessExecution
         }
 
         // We had no luck being first, so we try to dispose
-        Disposable.TryDisposeInstance(disposeWhenProcessExited);
+        ProcessBoundary.DisposeOrFailSilently(disposeWhenProcessExited);
     }
 
     /// <inheritdoc />
@@ -241,6 +240,7 @@ public sealed class ProcessExecution : IProcessExecution, IAsyncProcessExecution
     public void Kill() =>
         _process.Kill();
 
+    /// <inheritdoc/>
     public void Kill(bool entireProcessTree) =>
         _process.Kill(entireProcessTree);
 

@@ -1,5 +1,8 @@
 ﻿namespace Kenet.SimpleProcess;
 
+/// <summary>
+/// Represents the overall context of a process execution.
+/// </summary>
 public interface IProcessExecutionContext
 {
     /// <summary>

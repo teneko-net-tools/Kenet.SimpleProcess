@@ -1,10 +1,8 @@
 ﻿namespace Kenet.SimpleProcess;
 
 /// <summary>
-/// Represents an asynchronous process.
+/// Represents an asynchronous process execution.
 /// </summary>
-public interface IAsyncProcessExecution : IRunningProcess
+public interface IAsyncProcessExecution : IAsyncContextlessProcessExecution, IDisposableProcess
 {
-    /// <inheritdoc cref="IProcessExecution.RunToCompletion(CancellationToken)"/>.
-    Task<int> RunToCompletionAsync(CancellationToken cancellationToken, ProcessCompletionOptions completionOptions);
 }

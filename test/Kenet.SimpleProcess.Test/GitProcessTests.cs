@@ -21,39 +21,25 @@ public class GitProcessTests
     [MemberData(nameof(Git_rev_parse_output_should_be_captured_test_cases))]
     public void Git_rev_parse_output_should_be_captured_synchronously(ProcessExecutorBuilder builder)
     {
-        BufferOwner<byte> buffer = default;
+        using var boundary = new ProcessBoundary();
 
-        try
-        {
-            _ = builder
-                .WriteTo(b => b.AddOutputWriter, out buffer)
-                .RunToCompletion();
+        _ = builder
+            .WriteTo(b => b.AddOutputWriter, out var buffer, boundary)
+            .RunToCompletion();
 
-            buffer.WrittenCount.Should().NotBe(0);
-        }
-        finally
-        {
-            buffer.Dispose();
-        }
+        buffer.WrittenCount.Should().NotBe(0);
     }
 
     [Theory]
     [MemberData(nameof(Git_rev_parse_output_should_be_captured_test_cases))]
     public async Task Git_rev_parse_output_should_be_captured_asynchronously(ProcessExecutorBuilder builder)
     {
-        BufferOwner<byte> buffer = default;
+        using var boundary = new ProcessBoundary();
 
-        try
-        {
-            _ = await builder
-                .WriteTo(b => b.AddOutputWriter, out buffer)
-                .RunToCompletionAsync();
+        _ = await builder
+            .WriteTo(b => b.AddOutputWriter, out var buffer, boundary)
+            .RunToCompletionAsync();
 
-            buffer.WrittenCount.Should().NotBe(0);
-        }
-        finally
-        {
-            buffer.Dispose();
-        }
+        buffer.WrittenCount.Should().NotBe(0);
     }
 }

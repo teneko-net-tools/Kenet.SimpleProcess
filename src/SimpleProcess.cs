@@ -7,7 +7,13 @@ namespace Kenet.SimpleProcess;
 /// <summary>
 /// A simple process trying to replace the bootstrap code of a native instance of <see cref="Process"/>.
 /// </summary>
-public sealed class SimpleProcess : IProcessExecution, IAsyncProcessExecution, IRunnable<IProcessExecution>, IRunnable<IAsyncProcessExecution>
+public sealed class SimpleProcess :
+    IProcessExecution,
+    IAsyncProcessExecution,
+    IRunnable<IProcessExecution>,
+    IRunnable<IContextlessProcessExecution>,
+    IRunnable<IAsyncProcessExecution>,
+    IRunnable<IAsyncContextlessProcessExecution>
 {
     private static readonly TimeSpan _defaultKillTreeTimeout = TimeSpan.FromSeconds(10);
 
@@ -185,7 +191,19 @@ public sealed class SimpleProcess : IProcessExecution, IAsyncProcessExecution, I
         return this;
     }
 
+    IContextlessProcessExecution IRunnable<IContextlessProcessExecution>.Run()
+    {
+        Run();
+        return this;
+    }
+
     IAsyncProcessExecution IRunnable<IAsyncProcessExecution>.Run()
+    {
+        Run();
+        return this;
+    }
+
+    IAsyncContextlessProcessExecution IRunnable<IAsyncContextlessProcessExecution>.Run()
     {
         Run();
         return this;
@@ -214,7 +232,7 @@ public sealed class SimpleProcess : IProcessExecution, IAsyncProcessExecution, I
         }
 
         var isTokenWithErrorAssociated = false;
-        Disposable.TryDisposeInstance(cancellationToken.Register(() => isTokenWithErrorAssociated = true));
+        ProcessBoundary.DisposeOrFailSilently(cancellationToken.Register(() => isTokenWithErrorAssociated = true));
         return isTokenWithErrorAssociated;
     }
 
@@ -274,11 +292,11 @@ public sealed class SimpleProcess : IProcessExecution, IAsyncProcessExecution, I
         return _exitCode;
     }
 
-    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletion(IProcessExecution, CancellationToken)"/>
+    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletion(IContextlessProcessExecution, CancellationToken)"/>
     public int RunToCompletion(CancellationToken cancellationToken = default) =>
         RunToCompletion(cancellationToken, ProcessCompletionOptions.None);
 
-    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletion(IProcessExecution, ProcessCompletionOptions)"/>
+    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletion(IContextlessProcessExecution, ProcessCompletionOptions)"/>
     public int RunToCompletion(ProcessCompletionOptions completionOptions) =>
         RunToCompletion(CancellationToken.None, completionOptions);
 
@@ -306,11 +324,11 @@ public sealed class SimpleProcess : IProcessExecution, IAsyncProcessExecution, I
         return _exitCode;
     }
 
-    /// <inheritdoc cref="AsyncProcessExecutionExtensions.RunToCompletionAsync(IAsyncProcessExecution, CancellationToken)"/>
+    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletionAsync(IAsyncContextlessProcessExecution, CancellationToken)"/>
     public Task<int> RunToCompletionAsync(CancellationToken cancellationToken = default) =>
         RunToCompletionAsync(cancellationToken, ProcessCompletionOptions.None);
 
-    /// <inheritdoc cref="AsyncProcessExecutionExtensions.RunToCompletionAsync(IAsyncProcessExecution, ProcessCompletionOptions)"/>
+    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletionAsync(IAsyncContextlessProcessExecution, ProcessCompletionOptions)"/>
     public Task<int> RunToCompletionAsync(ProcessCompletionOptions completionOptions) =>
         RunToCompletionAsync(CancellationToken.None, completionOptions);
 

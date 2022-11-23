@@ -1,8 +1,14 @@
 ﻿namespace Kenet.SimpleProcess;
 
+/// <summary>
+/// Tweaks the process completion.
+/// </summary>
 [Flags]
 public enum ProcessCompletionOptions
 {
+    /// <summary>
+    /// Process completion (failure) won't kill the process nor dispose it.
+    /// </summary>
     None = 0,
     /// <summary>
     /// If the method associated cancellation token is cancellation requested, then the process is forced to terminate its underlying process.

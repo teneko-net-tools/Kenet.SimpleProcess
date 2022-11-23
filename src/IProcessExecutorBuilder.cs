@@ -1,5 +1,8 @@
 ﻿namespace Kenet.SimpleProcess;
 
+/// <summary>
+/// Capable to build an artifact for <see cref="ProcessExecutor"/>. You create
+/// </summary>
 public interface IProcessExecutorBuilder
 {
     /// <summary>

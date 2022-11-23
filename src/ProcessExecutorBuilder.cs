@@ -5,7 +5,13 @@ namespace Kenet.SimpleProcess;
 /// <summary>
 /// Describes a process to be executed.
 /// </summary>
-public sealed class ProcessExecutorBuilder : IProcessExecutorBuilder, IProcessExecutorMutator, IRunnable<IProcessExecution>, IRunnable<IAsyncProcessExecution>
+public sealed class ProcessExecutorBuilder :
+    IProcessExecutorBuilder,
+    IProcessExecutorMutator,
+    IRunnable<IProcessExecution>,
+    IRunnable<IContextlessProcessExecution>,
+    IRunnable<IAsyncProcessExecution>,
+    IRunnable<IAsyncContextlessProcessExecution>
 {
     /// <summary>
     /// Creates a builder with error interpretation in case of a bad exit code.
@@ -37,72 +43,74 @@ public sealed class ProcessExecutorBuilder : IProcessExecutorBuilder, IProcessEx
     public static ProcessExecutorBuilder CreateDefault(SimpleProcessStartInfo startInfo) =>
         CreateDefault(startInfo, validExitCode: 0);
 
-    private readonly List<CancellationToken> _cancellationTokens = new();
-    private readonly List<WriteHandler> _errorTracers = new();
-    private readonly List<WriteHandler> _outputTracers = new();
-    private readonly SimpleProcessStartInfo _startInfo;
-    private Encoding? _exitErrorEncoding;
-    private Func<int, bool>? _validateExitCode;
+    private ProcessExecutorArtifact _artifact;
 
     /// <summary>
     /// Creates an instance of this type.
     /// </summary>
     /// <param name="startInfo"></param>
     public ProcessExecutorBuilder(SimpleProcessStartInfo startInfo) =>
-        _startInfo = startInfo;
+        _artifact = new ProcessExecutorArtifact(startInfo);
 
+    /// <summary>
+    /// Creates an instance of this type.
+    /// </summary>
+    /// <param name="artifact"></param>
+    internal ProcessExecutorBuilder(ProcessExecutorArtifact artifact) =>
+        _artifact = artifact ?? throw new ArgumentNullException(nameof(artifact));
+
+    /// <inheritdoc cref="IProcessExecutorMutator.WithExitCode(Func{int, bool})"/>
     public ProcessExecutorBuilder WithExitCode(Func<int, bool> validator)
     {
-        _validateExitCode = validator;
+        _artifact.ValidateExitCode = validator;
         return this;
     }
 
     IProcessExecutorMutator IProcessExecutorMutator.WithExitCode(Func<int, bool> validate) =>
         WithExitCode(validate);
 
+    /// <inheritdoc cref="IProcessExecutorMutator.WithErrorInterpretation(Encoding?)"/>
     public ProcessExecutorBuilder WithErrorInterpretation(Encoding? encoding = null)
     {
-        _exitErrorEncoding ??= encoding ?? Encoding.UTF8;
+        _artifact.ExitErrorEncoding ??= encoding ?? Encoding.UTF8;
         return this;
     }
 
     IProcessExecutorMutator IProcessExecutorMutator.WithErrorInterpretation(Encoding? encoding) =>
         WithErrorInterpretation(encoding);
 
+    /// <inheritdoc cref="IProcessExecutorMutator.AddErrorWriter(WriteHandler)"/>
     public ProcessExecutorBuilder AddErrorWriter(WriteHandler writer)
     {
-        _errorTracers.Add(writer);
+        _artifact.ErrorWriters.Add(writer);
         return this;
     }
 
     IProcessExecutorMutator IProcessExecutorMutator.AddErrorWriter(WriteHandler writer) =>
         AddErrorWriter(writer);
 
+    /// <inheritdoc cref="IProcessExecutorMutator.AddOutputWriter(WriteHandler)"/>
     public ProcessExecutorBuilder AddOutputWriter(WriteHandler writer)
     {
-        _outputTracers.Add(writer);
+        _artifact.OutputWriters.Add(writer);
         return this;
     }
 
     IProcessExecutorMutator IProcessExecutorMutator.AddOutputWriter(WriteHandler writer) =>
         AddOutputWriter(writer);
 
+    /// <inheritdoc cref="IProcessExecutorMutator.AddCancellation(IEnumerable{CancellationToken})"/>
     public ProcessExecutorBuilder AddCancellation(IEnumerable<CancellationToken> cancellationTokens)
     {
-        _cancellationTokens.AddRange(cancellationTokens);
+        _artifact.CancellationTokens.AddRange(cancellationTokens);
         return this;
     }
 
     IProcessExecutorMutator IProcessExecutorMutator.AddCancellation(IEnumerable<CancellationToken> cancellationTokens) =>
         AddCancellation(cancellationTokens);
 
-    private IProcessExecutorArtifact BuildArtifact() => new ProcessExecutorBuilderArtifact(
-        _startInfo with { },
-        new List<CancellationToken>(_cancellationTokens),
-        new List<WriteHandler>(_errorTracers),
-        new List<WriteHandler>(_outputTracers),
-        _exitErrorEncoding,
-        _validateExitCode);
+    private ProcessExecutorArtifact BuildArtifact() =>
+        _artifact.Clone();
 
     IProcessExecutorArtifact IProcessExecutorBuilder.BuildArtifact() =>
         BuildArtifact();
@@ -118,9 +126,15 @@ public sealed class ProcessExecutorBuilder : IProcessExecutorBuilder, IProcessEx
         return execution;
     }
 
+    IProcessExecution IRunnable<IProcessExecution>.Run() =>
+        Run();
+
+    IContextlessProcessExecution IRunnable<IContextlessProcessExecution>.Run() =>
+        Run();
+
     IAsyncProcessExecution IRunnable<IAsyncProcessExecution>.Run() =>
         Run();
 
-    IProcessExecution IRunnable<IProcessExecution>.Run() =>
+    IAsyncContextlessProcessExecution IRunnable<IAsyncContextlessProcessExecution>.Run() =>
         Run();
 }

@@ -10,6 +10,7 @@ Supports synchronous and asynchronous workflows. The support of .NET Standard 2.
         </Description>
         <PackageTags>process</PackageTags>
         <LangVersion>latest</LangVersion>
+        <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
     </PropertyGroup>
 
     <ItemGroup>

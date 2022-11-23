@@ -1,5 +1,9 @@
 ﻿namespace Kenet.SimpleProcess;
 
+/// <summary>
+/// Makes an instance of type <typeparamref name="T"/> runnable.
+/// </summary>
+/// <typeparam name="T"></typeparam>
 public interface IRunnable<T>
 {
     /// <summary>

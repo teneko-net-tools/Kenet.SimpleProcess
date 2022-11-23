@@ -1,18 +1,8 @@
 ﻿namespace Kenet.SimpleProcess;
 
 /// <summary>
-/// Represents a synchronous process.
+/// Represents a synchronous process execution.
 /// </summary>
-public interface IProcessExecution : IRunningProcess
+public interface IProcessExecution : IContextlessProcessExecution, IDisposableProcess
 {
-    /// <summary>
-    /// Instructs the process to wait for the associated process to exit.
-    /// </summary>
-    /// <param name="cancellationToken">
-    /// A cancellation token that can cancel the on-going promise of completion. When this cancellation token is the origin of cancellation,
-    /// then please take into account that <see cref="IProcessExecution"/> is not yet disposed because the process is still executing.
-    /// This allows you to try for another completion.
-    /// </param>
-    /// <param name="completionOptions">Specifies options while waiting for completion.</param>
-    int RunToCompletion(CancellationToken cancellationToken, ProcessCompletionOptions completionOptions);
 }

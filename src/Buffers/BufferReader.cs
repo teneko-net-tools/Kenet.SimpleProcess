@@ -3,10 +3,10 @@
 namespace Kenet.SimpleProcess.Buffers;
 
 /// <summary>
-/// A buffer for which the user bears full responsibility.
+/// A buffer you can read from.
 /// </summary>
 /// <typeparam name="T"></typeparam>
-public readonly struct BufferOwner<T> : IDisposable
+public readonly struct BufferReader<T>
 {
     /// <inheritdoc cref="IBuffer{T}.WrittenMemory" />
     public ReadOnlyMemory<T> WrittenMemory => _bufferWriter?.WrittenMemory ?? ReadOnlyMemory<T>.Empty;
@@ -24,13 +24,9 @@ public readonly struct BufferOwner<T> : IDisposable
     /// </summary>
     /// <param name="bufferWriter"></param>
     /// <exception cref="ArgumentNullException"></exception>
-    public BufferOwner(ArrayPoolBufferWriter<T> bufferWriter) =>
+    public BufferReader(ArrayPoolBufferWriter<T> bufferWriter) =>
         _bufferWriter = bufferWriter ?? throw new ArgumentNullException(nameof(bufferWriter));
 
     /// <inheritdoc cref="IBuffer{T}.Clear" />
     public void Clear() => _bufferWriter?.Clear();
-
-    /// <inheritdoc />
-    public void Dispose() =>
-        _bufferWriter?.Dispose();
 }
