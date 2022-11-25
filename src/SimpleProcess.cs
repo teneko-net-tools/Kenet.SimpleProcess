@@ -1,6 +1,7 @@
 ﻿using System.Buffers;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using System.Runtime.ExceptionServices;
 
 namespace Kenet.SimpleProcess;
@@ -83,6 +84,18 @@ public sealed class SimpleProcess :
     [MemberNotNullWhen(true, nameof(_readOutputTask), nameof(_readErrorTask))]
     public bool IsRunning { get; private set; }
 
+    /// <summary>
+    /// The process id.
+    /// </summary>
+    public int? Id { get; private set; }
+
+    int IExecutingProcess.Id {
+        get {
+            ThrowIfNotStarted();
+            return Id.Value;
+        }
+    }
+
     /// <inheritdoc/>
     public CancellationToken Exited { get; }
 
@@ -95,16 +108,16 @@ public sealed class SimpleProcess :
     /// <inheritdoc/>
     public bool IsDisposed => _isDisposed == 1;
 
+    internal Process? _process;
+
     private Task? _readOutputTask;
     private Task? _readErrorTask;
 
     private readonly CancellationTokenSource _processCancellationTokenSource;
     private readonly CancellationTokenSource _processExitedTokenSource;
-    //private readonly CancellationTokenSource _disposedTokenSource;
-    //private readonly CancellationToken _disposedToken;
     private readonly object _startProcessLock = new();
-    private Process? _process;
-    private int _exitCode;
+    private Process? _processExitWatcher;
+    private int? _exitCode;
     private int _isDisposed;
 
     /// <summary>
@@ -119,14 +132,9 @@ public sealed class SimpleProcess :
     {
         StartInfo = startInfo ?? throw new ArgumentNullException(nameof(startInfo));
 
-        //// We can not expose the token to the public because some could use the wait handle of the token, but
-        //// because we cancel and dispose the token source in Dispose(), this could run into a race condition
-        //_disposedTokenSource = new CancellationTokenSource();
-        //_disposedToken = _disposedTokenSource.Token;
-
         /* REMINDER: When the process exited, the readers may not yet have processed all bytes so far,
          * so it may occur, that the readers get canceled before the last bytes are read. Therefore
-         * the exiting token source should not be canceled when exited. */
+         * the cancelled token source should not be canceled when exited. */
         _processCancellationTokenSource = cancellationToken.CanBeCanceled
             ? CancellationTokenSource.CreateLinkedTokenSource(cancellationToken)
             : new CancellationTokenSource();
@@ -149,7 +157,15 @@ public sealed class SimpleProcess :
     {
     }
 
-    internal void CreateProcess(out Process process)
+    [MemberNotNull(nameof(Id))]
+    private void ThrowIfNotStarted()
+    {
+        if (!IsRunning) {
+            throw new InvalidOperationException("The process has not been started yet");
+        }
+    }
+
+    private void CreateProcess(out Process process)
     {
         var currentProcess = _process;
 
@@ -187,9 +203,30 @@ public sealed class SimpleProcess :
 
             void OnProcessExited(object? sender, EventArgs e)
             {
-                process.Exited -= OnProcessExited;
+                //// See this for more info: https://github.com/dotnet/runtime/issues/51277
+                //void CloseProcess()
+                //{
+                //    const BindingFlags bindingFlags = BindingFlags.NonPublic | BindingFlags.Instance;
+                //    var outputField = typeof(Process).GetField("_output", bindingFlags) ?? typeof(Process).GetField("output", bindingFlags) ?? throw new InvalidOperationException();
+                //    var errorField = typeof(Process).GetField("_error", bindingFlags) ?? typeof(Process).GetField("error", bindingFlags) ?? throw new InvalidOperationException();
+                //    ((IDisposable?)outputField!.GetValue(process))?.Dispose();
+                //    ((IDisposable?)errorField!.GetValue(process))?.Dispose();
+                //}
+
+                //process.Exited -= OnProcessExited;
+
+                //try {
+                //    CloseProcess();
+                //} catch {
+                //    ; // Fire and forget
+                //}
+
                 IsExited = true;
-                _exitCode = process.ExitCode;
+
+                if (IsDisposed) {
+                    return;
+                }
+
                 _processExitedTokenSource.Cancel();
             }
 
@@ -199,6 +236,7 @@ public sealed class SimpleProcess :
                 throw new ProcessReuseException("Process reuse is not supported");
             }
 
+            Id = process.Id;
             IsRunning = true;
 
             /* REMINDER: Exiting token is hitting faster than stream can be read, so don't use it */
@@ -213,7 +251,12 @@ public sealed class SimpleProcess :
         }
     }
 
-    [MemberNotNull(nameof(_readOutputTask), nameof(_readErrorTask))]
+    //private void StartProcessExitWatcher()
+    //{
+
+    //}
+
+    [MemberNotNull(nameof(_process), nameof(_readOutputTask), nameof(_readErrorTask))]
     private void Run(out Process process)
     {
         CreateProcess(out process);
@@ -223,6 +266,7 @@ public sealed class SimpleProcess :
     /// <summary>
     /// Runs the process.
     /// </summary>
+    [MemberNotNull(nameof(_process))]
     public void Run() =>
         Run(out _);
 
@@ -320,42 +364,19 @@ public sealed class SimpleProcess :
     {
         Run(out var process);
 
-        #region Cancellation Token Source Creator
         CancellationTokenSource CreateCancellationTokenSource(out CancellationToken newCancellationToken)
         {
-            CancellationTokenSource? CreateProcessCancellationTokenSource(CancellationToken additionalCancellationToken, out CancellationToken newOrLinkedCancellationToken)
-            {
-                if (!additionalCancellationToken.CanBeCanceled) {
-                    newOrLinkedCancellationToken = Cancelled;
-                    return null;
-                }
+            var tokens = completionOptions.HasFlag(ProcessCompletionOptions.WaitForExit)
+                ? new CancellationToken[] { cancellationToken, }
+                : new CancellationToken[] { cancellationToken, Cancelled };
 
-                var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(additionalCancellationToken, Cancelled);
-                newOrLinkedCancellationToken = cancellationTokenSource.Token;
-                return cancellationTokenSource;
-            }
+            var tokenSource = tokens.Length == 0
+                ? new CancellationTokenSource()
+                : CancellationTokenSource.CreateLinkedTokenSource(tokens);
 
-            CancellationTokenSource CreateCompletionCancellationTokenSourceFallback(CancellationToken additionalCancellationToken, out CancellationToken linkedCancellationToken)
-            {
-                var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(additionalCancellationToken);
-                linkedCancellationToken = cancellationTokenSource.Token;
-                return cancellationTokenSource;
-            }
-
-            // If only waiting for exit, we ignore process cancellation token
-            if (completionOptions.HasFlag(ProcessCompletionOptions.WaitForExit)) {
-                return CreateCompletionCancellationTokenSourceFallback(cancellationToken, out newCancellationToken);
-            }
-
-            var cancellationTokenSource = CreateProcessCancellationTokenSource(cancellationToken, out newCancellationToken);
-
-            if (cancellationTokenSource == null) {
-                return CreateCompletionCancellationTokenSourceFallback(newCancellationToken, out newCancellationToken);
-            }
-
-            return cancellationTokenSource;
+            newCancellationToken = tokenSource.Token;
+            return tokenSource;
         }
-        #endregion
 
         using var cancellationTokenSource = CreateCancellationTokenSource(out var newCancellationToken);
 
@@ -397,8 +418,8 @@ public sealed class SimpleProcess :
                 }
 
                 // When the cancellation was not requested from the method-scoped cancellation token, then we can assume:
-                // 1. The process has fallen into cancelling state and the exiting token turned cancellation requested.
-                // 2. This instance disposed and the [disposed token -> exiting token] turned cancelled requested.
+                // 1. The process has fallen into cancelling state and the cancelled token turned cancellation requested.
+                // 2. This instance disposed and the [disposed token -> cancelled token] turned cancelled requested.
                 if (!cancellationToken.IsCancellationRequested) {
                     try {
                         Task.WaitAll(readOutputTask, readErrorTask);
@@ -433,6 +454,10 @@ public sealed class SimpleProcess :
 
                 whenAnyTask.GetAwaiter().GetResult();
             }
+
+            /* The process exited */
+            IsExited = true;
+            _exitCode ??= process.ExitCode;
         } catch (Exception error) {
             if (completionOptions != ProcessCompletionOptions.None
                 // Either method-scoped cancellation token or
@@ -448,7 +473,7 @@ public sealed class SimpleProcess :
             throw;
         }
 
-        return _exitCode;
+        return _exitCode.Value;
     }
 
     /// <inheritdoc/>

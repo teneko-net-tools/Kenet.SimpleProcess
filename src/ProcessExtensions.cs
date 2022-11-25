@@ -2,6 +2,9 @@
 using Nito.AsyncEx;
 #endif
 
+using System.Diagnostics;
+using System.Reflection;
+
 namespace Kenet.SimpleProcess;
 
 internal static partial class ProcessExtensions

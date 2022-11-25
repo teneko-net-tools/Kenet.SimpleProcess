@@ -5,8 +5,11 @@ namespace Kenet.SimpleProcess;
 /// <summary>
 /// Represents the running process.
 /// </summary>
-public interface IRunningProcess : IProcessExecutionContext
+public interface IExecutingProcess : IProcessInfo
 {
+    /// <inheritdoc cref="IProcessInfo.Id"/>
+    new int Id { get; }
+
     /// <summary>
     /// Cancels the current process.
     /// </summary>

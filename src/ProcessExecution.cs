@@ -87,6 +87,11 @@ public sealed class ProcessExecution : IProcessExecution, IAsyncProcessExecution
     public bool IsDisposed =>
         _process.IsDisposed;
 
+    /// <inheritdoc/>
+    public int Id => ((IExecutingProcess)_process).Id;
+
+    int? IProcessInfo.Id => _process.Id;
+
     private readonly SimpleProcess _process;
     private readonly Func<int, bool>? _validateExitCode;
     private readonly ArrayPoolBufferWriter<byte>? _errorBuffer;

@@ -3,8 +3,10 @@
 /// <summary>
 /// Represents the overall context of a process execution.
 /// </summary>
-public interface IProcessExecutionContext
+public interface IProcessInfo
 {
+    int? Id { get; }
+
     /// <summary>
     /// Indicates that the process has been started.
     /// </summary>

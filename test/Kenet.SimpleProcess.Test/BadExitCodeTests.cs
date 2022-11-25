@@ -52,7 +52,7 @@ namespace Kenet.SimpleProcess.Test
         [InlineData(new object[] { false })]
         public async Task Two_default_execution_run_to_completion_should_pass(bool synchronously)
         {
-            var execution = ProcessExecutorBuilder.CreateDefault(CreateBadExitCodeLeadingProcessStartInfo()).Run();
+            using var execution = ProcessExecutorBuilder.CreateDefault(CreateBadExitCodeLeadingProcessStartInfo()).Run();
 
             if (synchronously)
             {

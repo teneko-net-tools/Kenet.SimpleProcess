@@ -1,6 +1,6 @@
 ﻿namespace Kenet.SimpleProcess;
 
-public interface IContextlessProcessExecution : IRunningProcess
+public interface IContextlessProcessExecution : IExecutingProcess
 {
     /// <summary>
     /// Instructs the process to wait for the associated process to exit.

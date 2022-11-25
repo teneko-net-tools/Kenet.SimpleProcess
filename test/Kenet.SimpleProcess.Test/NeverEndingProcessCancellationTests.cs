@@ -17,7 +17,7 @@ namespace Kenet.SimpleProcess.Test
                 ? Task.Run(() => sleep.RunToCompletion())
                 : sleep.RunToCompletionAsync();
             sleep.Cancel();
-                await runTask.Awaiting(x => x).Should().ThrowAsync<OperationCanceledException>();
+            await runTask.Awaiting(x => x).Should().ThrowAsync<OperationCanceledException>();
         }
     }
 }
