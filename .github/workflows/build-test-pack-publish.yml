@@ -45,8 +45,8 @@ env:
   PUBLISHABLE_PACKAGES_DIR: ~/publishable_packages
 
 jobs:
-  pack:
-    runs-on: windows-2022
+  test:
+    runs-on: windows-2019 # Required to have .NET 4 SDK having pre-installed
     steps:
       - uses: actions/checkout@v2
         with:
@@ -55,12 +55,44 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: "5.0.x"
+          dotnet-version: "3.1.x"
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: "6.0.x"
+          dotnet-version: "5.0.x"
+
+      - name: Build
+        run: >
+          dotnet build
+          --verbosity $MSBUILD_VERBOSITY
+          --configuration $MSBUILD_CONFIGURATION
+        shell: bash
+
+      - name: Test
+        run: >
+          dotnet test
+          --verbosity $MSBUILD_VERBOSITY
+          --configuration $MSBUILD_CONFIGURATION
+          --no-build
+        shell: bash
+
+  pack:
+    runs-on: windows-2019
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: "3.1.x"
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: "5.0.x"
 
       - run: dotnet tool install --global Vernuntii.Console.GlobalTool --version 0.1.0-alpha.10
 
