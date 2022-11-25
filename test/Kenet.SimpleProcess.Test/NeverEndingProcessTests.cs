@@ -94,14 +94,14 @@ namespace Kenet.SimpleProcess.Test
             }
         }
 
-        [Theory]
-        [InlineData(new object[] { true, ProcessCompletionOptions.None })]
-        [InlineData(new object[] { false, ProcessCompletionOptions.None })]
-        [InlineData(new object[] { true, ProcessCompletionOptions.KillOnCancellation })]
-        [InlineData(new object[] { false, ProcessCompletionOptions.KillOnCancellation })]
-        public async Task Parallel_processes_write_eof_when_exiting_after_time(bool synchronously, ProcessCompletionOptions completionOptions)
-        {
-            await Task.WhenAll(Enumerable.Range(0, 10).Select(_ => Process_writes_eof_when_exiting_after_time(synchronously, cancelledAfterMilliseconds: 15, completionOptions)));
-        }
+        //[Theory]
+        //[InlineData(new object[] { true, ProcessCompletionOptions.None })]
+        //[InlineData(new object[] { false, ProcessCompletionOptions.None })]
+        //[InlineData(new object[] { true, ProcessCompletionOptions.KillOnCancellation })]
+        //[InlineData(new object[] { false, ProcessCompletionOptions.KillOnCancellation })]
+        //public async Task Parallel_processes_write_eof_when_exiting_after_time(bool synchronously, ProcessCompletionOptions completionOptions)
+        //{
+        //    await Task.WhenAll(Enumerable.Range(0, 10).Select(_ => Process_writes_eof_when_exiting_after_time(synchronously, cancelledAfterMilliseconds: 15, completionOptions)));
+        //}
     }
 }

@@ -13,7 +13,7 @@ public interface IProcessExecutorArtifact
     SimpleProcessStartInfo StartInfo { get; }
 
     /// <summary>
-    /// A list of cancelling state tokens, that may cause the process to fall into the cancelling state.
+    /// A list of cancellation tokens tokens, that may cause the process to fall into the cancelling state.
     /// </summary>
     IReadOnlyCollection<CancellationToken> CancellationTokens { get; }
 
