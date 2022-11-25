@@ -7,6 +7,36 @@ namespace Kenet.SimpleProcess;
 /// </summary>
 public interface IRunningProcess : IProcessExecutionContext
 {
+    /// <summary>
+    /// Cancels the current process.
+    /// </summary>
+    /// <remarks>
+    /// It does not kill the process.
+    /// </remarks>
+    /// <exception cref="ObjectDisposedException"/>
+    /// <exception cref="AggregateException"/>
+    void Cancel();
+
+    /// <summary>
+    /// Cancels the current process after given milliseconds.
+    /// </summary>
+    /// <remarks>
+    /// It does not kill the process.
+    /// </remarks>
+    /// <exception cref="ObjectDisposedException"/>
+    /// <exception cref="ArgumentOutOfRangeException"/>
+    void CancelAfter(int delayInMilliseconds);
+
+    /// <summary>
+    /// Cancels the current process after the delay.
+    /// </summary>
+    /// <remarks>
+    /// It does not kill the process.
+    /// </remarks>
+    /// <exception cref="ObjectDisposedException"/>
+    /// <exception cref="ArgumentOutOfRangeException"/>
+    void CancelAfter(TimeSpan delay);
+
     /// <inheritdoc cref="Process.Kill()"/>
     void Kill();
 

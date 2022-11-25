@@ -36,8 +36,10 @@ public interface IProcessExecutorMutator
     IProcessExecutorMutator AddOutputWriter(WriteHandler writer);
 
     /// <summary>
-    /// Adds another cancellation token.
+    /// Adds cancellation tokens, that may cause the process to fall into the cancelling state.
     /// </summary>
-    /// <param name="cancellationTokens"></param>
+    /// <param name="cancellationTokens">
+    /// Cancellation tokens, that may cause the process to fall into the cancelling state.
+    /// </param>
     IProcessExecutorMutator AddCancellation(IEnumerable<CancellationToken> cancellationTokens);
 }

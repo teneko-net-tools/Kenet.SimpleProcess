@@ -1,5 +1,4 @@
 ﻿using System.Buffers;
-using System.Runtime.CompilerServices;
 using System.Text;
 using CommunityToolkit.HighPerformance;
 using CommunityToolkit.HighPerformance.Buffers;
@@ -69,6 +68,10 @@ public sealed class ProcessExecution : IProcessExecution, IAsyncProcessExecution
     }
 
     /// <inheritdoc/>
+    public bool IsRunning =>
+        _process.IsRunning;
+
+    /// <inheritdoc/>
     public CancellationToken Exited =>
         _process.Exited;
 
@@ -76,12 +79,19 @@ public sealed class ProcessExecution : IProcessExecution, IAsyncProcessExecution
     public bool IsExited =>
         _process.IsExited;
 
+    /// <inheritdoc/>
+    public CancellationToken Cancelled =>
+        _process.Cancelled;
+
+    /// <inheritdoc/>
+    public bool IsDisposed =>
+        _process.IsDisposed;
+
     private readonly SimpleProcess _process;
     private readonly Func<int, bool>? _validateExitCode;
     private readonly ArrayPoolBufferWriter<byte>? _errorBuffer;
     private readonly Encoding? _exitErrorEncoding;
     private readonly CancellationTokenSource? _cancellationTokenSource;
-    private IDisposable? _disposeWhenProcessExited;
     private BadExitCodeException? _capturedException;
     private object _capturedExceptionLock;
     private int _isDisposed;
@@ -101,11 +111,20 @@ public sealed class ProcessExecution : IProcessExecution, IAsyncProcessExecution
         _cancellationTokenSource = cancellationTokenSource;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private bool IsDisposed() => _isDisposed == 1;
-
     internal void Run() =>
          _process.Run();
+
+    /// <inheritdoc/>
+    public void Cancel() =>
+        _process.Cancel();
+
+    /// <inheritdoc/>
+    public void CancelAfter(int delayInMilliseconds) =>
+        _process.CancelAfter(delayInMilliseconds);
+
+    /// <inheritdoc/>
+    public void CancelAfter(TimeSpan delay) =>
+        _process.CancelAfter(delay);
 
     private void CheckExitCode(int exitCode)
     {
@@ -128,7 +147,7 @@ public sealed class ProcessExecution : IProcessExecution, IAsyncProcessExecution
     {
         void TryInvalidateCache()
         {
-            if (IsDisposed()) {
+            if (IsDisposed) {
                 _capturedException = null;
             }
         }
@@ -154,85 +173,27 @@ public sealed class ProcessExecution : IProcessExecution, IAsyncProcessExecution
         return _capturedException ?? error;
     }
 
-    private void DisableDisposeOnExit(out bool reenable)
-    {
-        var previousDisposeOnExit = Interlocked.Exchange(ref _disposeWhenProcessExited, null);
-        reenable = previousDisposeOnExit != null;
-        ProcessBoundary.DisposeOrFailSilently(previousDisposeOnExit);
-    }
-
-    private void EnableDisposeOnExit()
-    {
-        if (_isDisposed == 1) {
-            return;
-        }
-
-        if (IsExited) {
-            Dispose();
-            return;
-        }
-
-        var disposeWhenProcessExited = Exited.Register(Dispose);
-
-        if (Interlocked.CompareExchange(ref _disposeWhenProcessExited, disposeWhenProcessExited, null) == null) {
-            return; // Everything worked fine
-        }
-
-        // We had no luck being first, so we try to dispose
-        ProcessBoundary.DisposeOrFailSilently(disposeWhenProcessExited);
-    }
-
     /// <inheritdoc />
     public int RunToCompletion(CancellationToken cancellationToken, ProcessCompletionOptions completionOptions)
     {
-        DisableDisposeOnExit(out var reenable);
-
         try {
             var exitCode = _process.RunToCompletion(cancellationToken, completionOptions);
             CheckExitCode(exitCode);
-
-            if (!reenable && completionOptions.HasFlag(ProcessCompletionOptions.DisposeOnCompleted)) {
-                EnableDisposeOnExit();
-            }
-
             return exitCode;
         } catch (Exception error) {
-            if (!reenable && completionOptions.HasFlag(ProcessCompletionOptions.DisposeOnFailure)) {
-                EnableDisposeOnExit();
-            }
-
             throw GetCapturedOrFallbackError(error);
-        } finally {
-            if (reenable) {
-                EnableDisposeOnExit();
-            }
         }
     }
 
     /// <inheritdoc />
     public async Task<int> RunToCompletionAsync(CancellationToken cancellationToken, ProcessCompletionOptions completionOptions)
     {
-        DisableDisposeOnExit(out var reenable);
-
         try {
             var exitCode = await _process.RunToCompletionAsync(cancellationToken, completionOptions);
             CheckExitCode(exitCode);
-
-            if (!reenable && completionOptions.HasFlag(ProcessCompletionOptions.DisposeOnCompleted)) {
-                EnableDisposeOnExit();
-            }
-
             return exitCode;
         } catch (Exception error) {
-            if (!reenable && completionOptions.HasFlag(ProcessCompletionOptions.DisposeOnFailure)) {
-                EnableDisposeOnExit();
-            }
-
             throw GetCapturedOrFallbackError(error);
-        } finally {
-            if (reenable) {
-                EnableDisposeOnExit();
-            }
         }
     }
 
@@ -251,6 +212,7 @@ public sealed class ProcessExecution : IProcessExecution, IAsyncProcessExecution
             return;
         }
 
+        _process.Dispose();
         _errorBuffer?.Dispose();
         _cancellationTokenSource?.Dispose();
     }

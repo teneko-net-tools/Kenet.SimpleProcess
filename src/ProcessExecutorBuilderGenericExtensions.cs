@@ -2,6 +2,7 @@
 
 public static partial class ProcessExecutorBuilderGenericExtensions
 {
+    /// <inheritdoc cref="IProcessExecutorMutator.AddCancellation(IEnumerable{CancellationToken})"/>
     public static T AddCancellation<T>(this T mutator, params CancellationToken[] cancellationTokens)
         where T : IProcessExecutorMutator
     {

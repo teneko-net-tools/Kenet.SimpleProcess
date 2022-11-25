@@ -11,64 +11,156 @@ namespace Kenet.SimpleProcess.Test
                 WorkingDirectory = AppContext.BaseDirectory
             };
 
-        [Fact]
-        public void Run_to_completion_should_throw_bad_exit_code()
+        [Theory]
+        [InlineData(new object[] { true })]
+        [InlineData(new object[] { false })]
+        public async Task Run_to_completion_should_throw_bad_exit_code(bool synchronously)
         {
-            ProcessExecutorBuilder.CreateDefault(CreateBadExitCodeLeadingProcessStartInfo())
-                .Invoking(builder => builder.RunToCompletion())
-                .Should().Throw<BadExitCodeException>();
+            var builder = ProcessExecutorBuilder.CreateDefault(CreateBadExitCodeLeadingProcessStartInfo());
+
+            if (synchronously)
+            {
+                builder.Invoking(builder => builder.RunToCompletion()).Should().Throw<BadExitCodeException>();
+            }
+            else
+            {
+                await builder.Awaiting(builder => builder.RunToCompletionAsync()).Should().ThrowAsync<BadExitCodeException>();
+            }
         }
 
-        [Fact]
-        public void Two_execution_run_to_completion_should_pass()
+        [Theory]
+        [InlineData(new object[] { true })]
+        [InlineData(new object[] { false })]
+        public async Task Two_execution_run_to_completion_should_pass(bool synchronously)
         {
             using var execution = new ProcessExecutorBuilder(CreateBadExitCodeLeadingProcessStartInfo()).Run();
-            execution.RunToCompletionAsync().Should().NotBe(0);
-            execution.RunToCompletionAsync().Should().NotBe(0);
+
+            if (synchronously)
+            {
+                execution.RunToCompletion().Should().NotBe(0);
+            }
+            else
+            {
+                (await execution.RunToCompletionAsync()).Should().NotBe(0);
+            }
+
+            execution.RunToCompletion().Should().NotBe(0);
         }
 
-        [Fact]
-        public void Two_default_execution_run_to_completion_should_pass()
+        [Theory]
+        [InlineData(new object[] { true })]
+        [InlineData(new object[] { false })]
+        public async Task Two_default_execution_run_to_completion_should_pass(bool synchronously)
         {
-            using var execution = ProcessExecutorBuilder.CreateDefault(CreateBadExitCodeLeadingProcessStartInfo()).Run();
+            var execution = ProcessExecutorBuilder.CreateDefault(CreateBadExitCodeLeadingProcessStartInfo()).Run();
 
-            execution.Invoking(x => x.RunToCompletionAsync())
-                 .Should().ThrowAsync<BadExitCodeException>();
+            if (synchronously)
+            {
+                execution.Invoking(x => x.RunToCompletion()).Should().Throw<BadExitCodeException>();
+            }
+            else
+            {
+                await execution.Awaiting(x => x.RunToCompletionAsync()).Should().ThrowAsync<BadExitCodeException>();
+            }
 
-            execution.Invoking(x => x.RunToCompletionAsync())
-                 .Should().ThrowAsync<BadExitCodeException>();
+            if (synchronously)
+            {
+                execution.Invoking(x => x.RunToCompletion()).Should().Throw<BadExitCodeException>();
+            }
+            else
+            {
+                await execution.Awaiting(x => x.RunToCompletionAsync()).Should().ThrowAsync<BadExitCodeException>();
+            }
         }
 
-        [Fact]
-        public void Two_default_execution_run_to_completion_should_throw_bad_exit_code_then_throw_invalid_operation()
+        [Theory]
+        [InlineData(new object[] { true })]
+        [InlineData(new object[] { false })]
+        public async Task Two_default_execution_run_to_completion_should_throw_bad_exit_code_then_throw_invalid_operation(bool synchronously)
         {
-            ProcessExecution execution = ProcessExecutorBuilder.CreateDefault(CreateBadExitCodeLeadingProcessStartInfo()).Build().Run();
+            var execution = ProcessExecutorBuilder.CreateDefault(CreateBadExitCodeLeadingProcessStartInfo()).Run();
 
-            execution.Invoking(x => x.RunToCompletion(ProcessCompletionOptions.DisposeOnFailure))
-                .Should().Throw<BadExitCodeException>();
+            {
+                using var _ = execution;
 
-            execution.Invoking(x => x.RunToCompletion())
-                .Should().Throw<InvalidOperationException>();
+                if (synchronously)
+                {
+                    execution.Invoking(x => x.RunToCompletion()).Should().Throw<BadExitCodeException>();
+                }
+                else
+                {
+                    await execution.Awaiting(x => x.RunToCompletionAsync()).Should().ThrowAsync<BadExitCodeException>();
+                }
+            }
+
+            if (synchronously)
+            {
+                execution.Invoking(x => x.RunToCompletion()).Should().Throw<InvalidOperationException>();
+            }
+            else
+            {
+                await execution.Awaiting(x => x.RunToCompletionAsync()).Should().ThrowAsync<InvalidOperationException>();
+            }
         }
 
-        [Fact]
-        public void Two_default_execution_run_to_completion_should_return_exit_code_then_throw_invalid_operation()
+        [Theory]
+        [InlineData(new object[] { true })]
+        [InlineData(new object[] { false })]
+        public async Task Two_default_execution_run_to_completion_should_return_exit_code_then_throw_invalid_operation(bool synchronously)
         {
-            ProcessExecution execution = new ProcessExecutorBuilder(CreateBadExitCodeLeadingProcessStartInfo()).Build().Run();
-            execution.RunToCompletion(ProcessCompletionOptions.DisposeOnCompleted).Should().NotBe(0);
+            var execution = new ProcessExecutorBuilder(CreateBadExitCodeLeadingProcessStartInfo()).Run();
 
-            execution.Invoking(x => x.RunToCompletion())
-                .Should().Throw<InvalidOperationException>();
+            {
+                using var _ = execution;
+
+                if (synchronously)
+                {
+                    execution.RunToCompletion().Should().NotBe(0);
+                }
+                else
+                {
+                    (await execution.RunToCompletionAsync()).Should().NotBe(0);
+                }
+            }
+
+            if (synchronously)
+            {
+                execution.Invoking(x => x.RunToCompletion()).Should().Throw<InvalidOperationException>();
+            }
+            else
+            {
+                await execution.Awaiting(x => x.RunToCompletionAsync()).Should().ThrowAsync<InvalidOperationException>();
+            }
         }
 
-        [Fact]
-        public void Two_process_run_to_completion_should_return_exit_code_then_throw_invalid_operation()
+        [Theory]
+        [InlineData(new object[] { true })]
+        [InlineData(new object[] { false })]
+        public async Task Two_process_run_to_completion_should_return_exit_code_then_throw_invalid_operation(bool synchronously)
         {
-            SimpleProcess process = new(CreateBadExitCodeLeadingProcessStartInfo());
-            process.RunToCompletion(ProcessCompletionOptions.DisposeOnCompleted).Should().NotBe(0);
+            var process = new SimpleProcess(CreateBadExitCodeLeadingProcessStartInfo());
 
-            process.Invoking(x => x.RunToCompletion())
-                .Should().Throw<InvalidOperationException>();
+            {
+                using var _ = process;
+
+                if (synchronously)
+                {
+                    process.RunToCompletion().Should().NotBe(0);
+                }
+                else
+                {
+                    (await process.RunToCompletionAsync()).Should().NotBe(0);
+                }
+            }
+
+            if (synchronously)
+            {
+                process.Invoking(x => x.RunToCompletion()).Should().Throw<InvalidOperationException>();
+            }
+            else
+            {
+                await process.Awaiting(x => x.RunToCompletionAsync()).Should().ThrowAsync<InvalidOperationException>();
+            }
         }
     }
 }

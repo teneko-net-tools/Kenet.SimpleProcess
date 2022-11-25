@@ -1,4 +1,6 @@
-﻿namespace Kenet.SimpleProcess.Sleep;
+﻿using System.Threading.Tasks;
+
+namespace Kenet.SimpleProcess.Sleep;
 
 internal class Program
 {
