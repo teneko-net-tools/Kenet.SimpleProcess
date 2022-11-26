@@ -1,20 +1,24 @@
-﻿using System.Runtime.CompilerServices;
-
-namespace Kenet.SimpleProcess;
+﻿namespace Kenet.SimpleProcess;
 
 /// <summary>
 /// Represents the "boundary" of a process. When you decide to dispose this boundary, then all instances that got associated with this boundary are disposed too.
 /// </summary>
 public readonly struct ProcessBoundary : IDisposable
 {
-    private static readonly List<IDisposable> _emptyList = new List<IDisposable>();
+    private const int _defaultInitialCapacity = 4;
+
+    private static readonly List<IDisposable?> _disposedIndicatingList = new(capacity: 0);
+    private static readonly List<IDisposable?> _invalidatedIndicatingList = new(capacity: 1);
 
     /// <summary>
     /// Represents a boundary that is already disposed.
     /// </summary>
-    public static readonly ProcessBoundary Invalidated = new ProcessBoundary(initialCapacity: 0);
+    public static readonly ProcessBoundary Disposed = new ProcessBoundary(initialCapacity: 0);
 
-    private const int _defaultInitialBufferSize = 4;
+    /// <summary>
+    /// Represents a special boundary that is in a faulty state. Any attempt to add an association or to dispsoe the instance results into a <see cref="InvalidOperationException"/>.
+    /// </summary>
+    internal static readonly ProcessBoundary Faulted = new ProcessBoundary(initialCapacity: 1);
 
     internal static void DisposeOrFailSilently(IDisposable? instance)
     {
@@ -25,7 +29,22 @@ public readonly struct ProcessBoundary : IDisposable
         }
     }
 
-    private readonly List<IDisposable> _buffer;
+    /// <summary>
+    /// Indicates whether the boundary has been disposed or not.
+    /// </summary>
+    public bool IsDisposed =>
+        _buffer.Capacity == 0;
+
+    /// <summary>
+    /// Indicates whether the boundary has been invalidated or not.
+    /// </summary>
+    /// <remarks>
+    /// If <see langword="true"/> it is not allowed to associate further disposables with this boundary.
+    /// </remarks>
+    internal bool IsFaulted =>
+        _buffer.Capacity == 1;
+
+    private readonly List<IDisposable?> _buffer;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProcessBoundary"/> class.
@@ -34,24 +53,22 @@ public readonly struct ProcessBoundary : IDisposable
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="initialCapacity"/> is not valid.</exception>
     private ProcessBoundary(int initialCapacity) =>
         _buffer = initialCapacity == 0
-            ? _emptyList
-            : new List<IDisposable>(initialCapacity);
+            ? _disposedIndicatingList
+            : (initialCapacity == 1
+                ? _invalidatedIndicatingList
+                : new List<IDisposable?>(initialCapacity));
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProcessBoundary"/> class.
     /// </summary>
-    public ProcessBoundary() : this(_defaultInitialBufferSize)
+    public ProcessBoundary() : this(_defaultInitialCapacity)
     {
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private bool IsBufferInvalidated() =>
-        _buffer.Capacity == 0;
-
-    private void EnsureBufferNotInvalidated()
+    private void EnsureNotFaulted()
     {
-        if (IsBufferInvalidated()) {
-            throw new ObjectDisposedException(objectName: null, "The underlying buffer has been already disposed");
+        if (IsFaulted) {
+            throw new InvalidOperationException("The underlying buffer indicates an invalidated state");
         }
     }
 
@@ -61,11 +78,19 @@ public readonly struct ProcessBoundary : IDisposable
     /// will be disposed too.
     /// </summary>
     /// <param name="disposable"></param>
-    public void Associate(IDisposable disposable)
+    public ProcessBoundaryRegistration Associate(IDisposable disposable)
     {
+        EnsureNotFaulted();
+
         lock (_buffer) {
-            EnsureBufferNotInvalidated();
-            _buffer.Add(disposable);
+            if (IsDisposed) {
+                disposable.Dispose();
+                return ProcessBoundaryRegistration.Default;
+            } else {
+                var start = _buffer.Count;
+                _buffer.Add(disposable);
+                return new ProcessBoundaryRegistration(this, start, length: 1);
+            }
         }
     }
 
@@ -75,11 +100,30 @@ public readonly struct ProcessBoundary : IDisposable
     /// will be disposed too.
     /// </summary>
     /// <param name="disposables"></param>
-    public void Associate(IEnumerable<IDisposable> disposables)
+    /// <exception cref="AggregateException"></exception>
+    public ProcessBoundaryRegistration Associate(IEnumerable<IDisposable> disposables)
     {
+        EnsureNotFaulted();
+
         lock (_buffer) {
-            EnsureBufferNotInvalidated();
-            _buffer.AddRange(disposables);
+            if (IsDisposed) {
+                Disposables.DisposeRange(_buffer, out var aggregatedError);
+
+                if (aggregatedError != null) {
+                    throw aggregatedError;
+                }
+
+                return ProcessBoundaryRegistration.Default;
+            } else {
+                var start = _buffer.Count;
+                _buffer.AddRange(disposables);
+                var postAddLength = _buffer.Count;
+
+                return new ProcessBoundaryRegistration(
+                    this,
+                    start,
+                    length: postAddLength - start);
+            }
         }
     }
 
@@ -89,28 +133,54 @@ public readonly struct ProcessBoundary : IDisposable
     /// will be disposed too.
     /// </summary>
     /// <param name="disposables"></param>
-    public void Associate(params IDisposable[] disposables)
+    /// <exception cref="AggregateException"></exception>
+    public ProcessBoundaryRegistration Associate(params IDisposable[] disposables) =>
+        Associate((IEnumerable<IDisposable>)disposables);
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="start"></param>
+    /// <param name="length"></param>
+    /// <exception cref="ArgumentOutOfRangeException"></exception>
+    internal void DisableAssociations(int start, int length)
     {
         lock (_buffer) {
-            EnsureBufferNotInvalidated();
-            _buffer.AddRange(disposables);
+            if (IsDisposed) {
+                return;
+            }
+
+            if (_buffer[start] == null) {
+                return;
+            }
+
+            for (var i = start; i < length; i++) {
+                _buffer[i] = null;
+            }
         }
     }
 
     /// <summary>
     /// Disposes everything this struct is associated with.
     /// </summary>
-    /// <exception cref="NotImplementedException"></exception>
+    /// <exception cref="AggregateException"></exception>
     public void Dispose()
     {
+        EnsureNotFaulted();
+
         lock (_buffer) {
-            if (IsBufferInvalidated()) {
+            if (IsDisposed) {
                 return;
             }
 
+            Disposables.DisposeRange(_buffer, out var aggregatedError);
+
             _buffer.Clear();
             _buffer.Capacity = 0;
-            _buffer.TrimExcess();
+
+            if (aggregatedError != null) {
+                throw aggregatedError;
+            }
         }
     }
 }

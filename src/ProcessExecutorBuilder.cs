@@ -3,7 +3,7 @@
 namespace Kenet.SimpleProcess;
 
 /// <summary>
-/// Describes a process to be executed.
+/// Builds a process executor.
 /// </summary>
 public sealed class ProcessExecutorBuilder :
     IProcessExecutorBuilder,
@@ -66,7 +66,7 @@ public sealed class ProcessExecutorBuilder :
         return this;
     }
 
-    IProcessExecutorMutator IProcessExecutorMutator.WithExitCode(Func<int, bool> validate) =>
+    void IProcessExecutorMutator.WithExitCode(Func<int, bool> validate) =>
         WithExitCode(validate);
 
     /// <inheritdoc cref="IProcessExecutorMutator.WithErrorInterpretation(Encoding?)"/>
@@ -76,7 +76,7 @@ public sealed class ProcessExecutorBuilder :
         return this;
     }
 
-    IProcessExecutorMutator IProcessExecutorMutator.WithErrorInterpretation(Encoding? encoding) =>
+    void IProcessExecutorMutator.WithErrorInterpretation(Encoding? encoding) =>
         WithErrorInterpretation(encoding);
 
     /// <inheritdoc cref="IProcessExecutorMutator.AddErrorWriter(WriteHandler)"/>
@@ -86,7 +86,7 @@ public sealed class ProcessExecutorBuilder :
         return this;
     }
 
-    IProcessExecutorMutator IProcessExecutorMutator.AddErrorWriter(WriteHandler writer) =>
+    void IProcessExecutorMutator.AddErrorWriter(WriteHandler writer) =>
         AddErrorWriter(writer);
 
     /// <inheritdoc cref="IProcessExecutorMutator.AddOutputWriter(WriteHandler)"/>
@@ -96,7 +96,7 @@ public sealed class ProcessExecutorBuilder :
         return this;
     }
 
-    IProcessExecutorMutator IProcessExecutorMutator.AddOutputWriter(WriteHandler writer) =>
+    void IProcessExecutorMutator.AddOutputWriter(WriteHandler writer) =>
         AddOutputWriter(writer);
 
     /// <inheritdoc cref="IProcessExecutorMutator.AddCancellation(IEnumerable{CancellationToken})"/>
@@ -106,7 +106,7 @@ public sealed class ProcessExecutorBuilder :
         return this;
     }
 
-    IProcessExecutorMutator IProcessExecutorMutator.AddCancellation(IEnumerable<CancellationToken> cancellationTokens) =>
+    void IProcessExecutorMutator.AddCancellation(IEnumerable<CancellationToken> cancellationTokens) =>
         AddCancellation(cancellationTokens);
 
     private ProcessExecutorArtifact BuildArtifact() =>
@@ -114,6 +114,13 @@ public sealed class ProcessExecutorBuilder :
 
     IProcessExecutorArtifact IProcessExecutorBuilder.BuildArtifact() =>
         BuildArtifact();
+
+    /// <summary>
+    /// Builds the process executor.
+    /// </summary>
+    /// <returns></returns>
+    public ProcessExecutor Build() =>
+        new ProcessExecutor(BuildArtifact());
 
     /// <summary>
     /// Runs the process with the current design of a process executor.

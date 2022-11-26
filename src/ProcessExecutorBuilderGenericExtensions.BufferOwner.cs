@@ -14,7 +14,7 @@ public static partial class ProcessExecutorBuilderGenericExtensions
     /// <param name="bufferOwner"></param>
     /// <typeparam name="T"></typeparam>
     /// <returns></returns>
-    public static T WriteTo<T>(
+    public static T WriteToBuffer<T>(
         this T mutator,
         Func<T, Action<WriteHandler>> readFrom,
         out BufferOwner<byte> bufferOwner)
@@ -34,7 +34,7 @@ public static partial class ProcessExecutorBuilderGenericExtensions
     /// <param name="bufferOwner"></param>
     /// <typeparam name="T"></typeparam>
     /// <returns></returns>
-    public static T WriteTo<T>(
+    public static T WriteToBuffer<T>(
         this T mutator,
         Func<T, Func<WriteHandler, object>> readFrom,
         out BufferOwner<byte> bufferOwner)
@@ -42,6 +42,6 @@ public static partial class ProcessExecutorBuilderGenericExtensions
     {
         var writerHandler = readFrom(mutator);
         void WriteHandler(WriteHandler bytes) => _ = writerHandler(bytes);
-        return WriteTo(mutator, _ => WriteHandler, out bufferOwner);
+        return WriteToBuffer(mutator, _ => WriteHandler, out bufferOwner);
     }
 }

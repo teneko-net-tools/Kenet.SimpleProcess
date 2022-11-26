@@ -3,13 +3,12 @@ using Nito.AsyncEx;
 #endif
 
 using System.Diagnostics;
-using System.Reflection;
 
 namespace Kenet.SimpleProcess;
 
 internal static partial class ProcessExtensions
 {
-    public static Task WaitForExitAsync(this System.Diagnostics.Process process, CancellationToken cancellationToken)
+    public static Task WaitForExitAsync(this Process process, CancellationToken cancellationToken)
     {
 #if NET5_0_OR_GREATER
         return process.WaitForExitAsync(cancellationToken);
@@ -19,7 +18,7 @@ internal static partial class ProcessExtensions
     }
 
 #if !NET5_0_OR_GREATER
-    public static async Task WaitForExitAsyncFallback(this System.Diagnostics.Process process, CancellationToken cancellationToken)
+    public static async Task WaitForExitAsyncFallback(this Process process, CancellationToken cancellationToken)
     {
         if (!process.HasExited) {
             cancellationToken.ThrowIfCancellationRequested();

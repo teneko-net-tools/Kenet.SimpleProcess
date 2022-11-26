@@ -15,7 +15,7 @@ public static partial class ProcessExecutorBuilderGenericExtensions
     /// <param name="bufferReader"></param>
     /// <param name="boundary"></param>
     /// <returns></returns>
-    public static T WriteTo<T>(
+    public static T WriteToBuffer<T>(
         this T mutator,
         Func<T, Func<WriteHandler, object>> readFrom,
         out BufferReader<byte> bufferReader,

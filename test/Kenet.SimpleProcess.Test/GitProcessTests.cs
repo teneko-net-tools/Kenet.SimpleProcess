@@ -23,7 +23,7 @@ public class GitProcessTests
         using var boundary = new ProcessBoundary();
 
         _ = builder
-            .WriteTo(b => b.AddOutputWriter, out var buffer, boundary)
+            .WriteToBuffer(b => b.AddOutputWriter, out var buffer, boundary)
             .RunToCompletion();
 
         buffer.WrittenCount.Should().NotBe(0);
@@ -36,7 +36,7 @@ public class GitProcessTests
         using var boundary = new ProcessBoundary();
 
         _ = await builder
-            .WriteTo(b => b.AddOutputWriter, out var buffer, boundary)
+            .WriteToBuffer(b => b.AddOutputWriter, out var buffer, boundary)
             .RunToCompletionAsync();
 
         buffer.WrittenCount.Should().NotBe(0);

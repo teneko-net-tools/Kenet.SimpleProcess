@@ -1,7 +1,6 @@
 ﻿using System.Buffers;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Reflection;
 using System.Runtime.ExceptionServices;
 
 namespace Kenet.SimpleProcess;
@@ -116,7 +115,6 @@ public sealed class SimpleProcess :
     private readonly CancellationTokenSource _processCancellationTokenSource;
     private readonly CancellationTokenSource _processExitedTokenSource;
     private readonly object _startProcessLock = new();
-    private Process? _processExitWatcher;
     private int? _exitCode;
     private int _isDisposed;
 
@@ -227,7 +225,11 @@ public sealed class SimpleProcess :
                     return;
                 }
 
-                _processExitedTokenSource.Cancel();
+                try {
+                    _processExitedTokenSource.Cancel();
+                } catch (ObjectDisposedException) {
+                    ; // Dispose() was faster
+                }
             }
 
             process.Exited += OnProcessExited;
