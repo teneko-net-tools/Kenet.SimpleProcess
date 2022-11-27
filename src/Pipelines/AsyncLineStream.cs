@@ -24,6 +24,7 @@ namespace Kenet.SimpleProcess.Pipelines
         private TicketLock _writeLock;
         private List<Task>? _writeTasks;
         private int _isDisposed;
+        private bool _isLastLinePending;
 
         public AsyncLineStream()
         {
@@ -96,8 +97,13 @@ namespace Kenet.SimpleProcess.Pipelines
             return false;
         }
 
-        private ConsumedMemoryOwner<byte> ReadLine(ReadOnlySequence<byte> line, int newLineLength, bool advanceStream = true)
+        private bool TryReadLine(out ConsumedMemoryOwner<byte> memoryOwner, ReadOnlySequence<byte> line, int newLineLength, bool advanceStream = true)
         {
+            if (!_isLastLinePending && line.Length == 0 && line.Start.Equals(_sequence.Start) && line.End.Equals(_sequence.End)) {
+                memoryOwner = ConsumedMemoryOwner<byte>.Empty;
+                return false;
+            }
+
             var longLineLength = line.Length - newLineLength;
 
             if (longLineLength > int.MaxValue) {
@@ -112,7 +118,8 @@ namespace Kenet.SimpleProcess.Pipelines
                 AdvanceTo(line, advancePastSequence: true);
             }
 
-            return new ConsumedMemoryOwner<byte>(lineMemoryOwner, lineLength);
+            memoryOwner = new ConsumedMemoryOwner<byte>(lineMemoryOwner, lineLength);
+            return true;
         }
 
         private IEnumerable<ConsumedMemoryOwner<byte>> ReadLines(ConsumedMemoryOwner<byte> memoryOwner)
@@ -136,7 +143,10 @@ namespace Kenet.SimpleProcess.Pipelines
             }
 
             while (TrySeekNewLine(out var line, out var newLineLength)) {
-                yield return ReadLine(line, newLineLength, advanceStream: true);
+                if (TryReadLine(out memoryOwner, line, newLineLength, advanceStream: true)) {
+                    _isLastLinePending = true;
+                    yield return memoryOwner;
+                }
             }
         }
 
@@ -193,12 +203,12 @@ namespace Kenet.SimpleProcess.Pipelines
 
             // We write directly to underlying buffer
             try {
-                var line = ReadLine(_sequence, newLineLength: 0, advanceStream: false);
-
-                if (synchronous) {
-                    WrittenLines.Add(line);
-                } else {
-                    await WrittenLines.AddAsync(line);
+                if (TryReadLine(out var line, _sequence, newLineLength: 0, advanceStream: false)) {
+                    if (synchronous) {
+                        WrittenLines.Add(line);
+                    } else {
+                        await WrittenLines.AddAsync(line);
+                    }
                 }
             } catch (Exception error) {
                 var memoryOwner = new ConsumedMemoryOwner<byte>(new ErroneousMemoryOwner<byte>(error), 0);

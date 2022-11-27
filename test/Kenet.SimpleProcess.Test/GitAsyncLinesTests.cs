@@ -14,11 +14,20 @@ namespace Kenet.SimpleProcess.Test
         [Fact]
         public async Task Execution_should_read_lines()
         {
+            const byte lineFeed = 10; // \n
             var expectedNumberOfCommits = 5;
+            byte lastByte = 0;
 
             using var execution = new ProcessExecutorBuilder(CreateGitLogStartInfo(expectedNumberOfCommits))
                 .Build()
                 .WriteToAsyncLines(x => x.AddOutputWriter, out var lines)
+                .AddOutputWriter(bytes =>
+                {
+                    if (bytes.Length != 0)
+                    {
+                        lastByte = bytes[^1];
+                    }
+                })
                 .Run();
 
             var commits = new List<string>();
@@ -28,8 +37,8 @@ namespace Kenet.SimpleProcess.Test
                 commits.Add(line);
             }
 
-            commits.Count.Should().Be(expectedNumberOfCommits);
-            execution.IsExited.Should().BeTrue();
+            commits.Count.Should().Be(expectedNumberOfCommits + 1);
+            lastByte.Should().Be(lineFeed);
         }
     }
 }

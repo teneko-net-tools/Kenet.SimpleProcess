@@ -17,14 +17,16 @@ namespace Kenet.SimpleProcess.Pipelines
         }
 
         public int Offset { get; private set; }
-        public int Length { get; private set; }
+        public int OffsetRelativeLength { get; private set; }
 
         private SequenceSegment? _next;
+        public readonly int _memoryLength;
 
-        public SequenceSegment(IMemoryOwner<byte> memoryOwner, int length)
+        public SequenceSegment(IMemoryOwner<byte> memoryOwner, int memoryLength)
         {
             MemoryOwner = memoryOwner;
-            Length = length;
+            _memoryLength = memoryLength;
+            OffsetRelativeLength = memoryLength;
             UpdateMemory();
         }
 
@@ -43,7 +45,7 @@ namespace Kenet.SimpleProcess.Pipelines
         /// Updates the memory with current offset and length.
         /// </summary>
         private void UpdateMemory() =>
-            Memory = MemoryOwner.Memory.Slice(Offset, Length);
+            Memory = MemoryOwner.Memory.Slice(Offset, OffsetRelativeLength);
 
         public ReadOnlySpan<byte> AsSpan(int startIndex, int length)
         {
@@ -53,7 +55,7 @@ namespace Kenet.SimpleProcess.Pipelines
         }
 
         public ReadOnlySpan<byte> AsSpan(int startIndex) =>
-            AsSpan(startIndex, Length - startIndex);
+            AsSpan(startIndex, OffsetRelativeLength - startIndex);
 
         public ReadOnlySpan<byte> AsSpan() =>
             AsSpan(0);
@@ -64,7 +66,7 @@ namespace Kenet.SimpleProcess.Pipelines
             var nextSegment = Next;
 
             while (nextSegment != null) {
-                nextSegment.RunningIndex = segment.RunningIndex + segment.Length;
+                nextSegment.RunningIndex = segment.RunningIndex + segment.OffsetRelativeLength;
                 segment = nextSegment;
                 nextSegment = nextSegment.Next;
             }
@@ -76,14 +78,12 @@ namespace Kenet.SimpleProcess.Pipelines
         /// <param name="offset">The amount by which <see cref="Offset"/> will be incremented.</param>
         public void IncrementOffset(int offset)
         {
-            offset = Offset + offset;
-
-            if (offset.Equals(Offset)) {
+            if (offset == 0) {
                 return;
             }
 
-            Offset = offset;
-            Length = MemoryOwner.Memory.Length - offset;
+            Offset += offset;
+            OffsetRelativeLength -= offset;
             UpdateMemory();
             UpdateNextRunningIndexesRecursively();
         }
@@ -99,7 +99,7 @@ namespace Kenet.SimpleProcess.Pipelines
             }
 
             Offset = offset;
-            Length = MemoryOwner.Memory.Length - offset;
+            OffsetRelativeLength = _memoryLength - offset;
             UpdateMemory();
             UpdateNextRunningIndexesRecursively();
         }

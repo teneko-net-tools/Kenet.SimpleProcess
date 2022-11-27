@@ -1,9 +1,12 @@
 ﻿using System.Buffers;
+using CommunityToolkit.HighPerformance.Buffers;
 
 namespace Kenet.SimpleProcess.Pipelines;
 
 internal readonly struct ConsumedMemoryOwner<T> : IMemoryOwner<T>
 {
+    public static readonly ConsumedMemoryOwner<T> Empty = new ConsumedMemoryOwner<T>(MemoryOwner<T>.Empty, 0);
+
     public Memory<T> Memory =>
         _memoryOwner.Memory;
 
@@ -28,6 +31,10 @@ internal readonly struct ConsumedMemoryOwner<T> : IMemoryOwner<T>
         }
 
         Consumed = consumed;
+    }
+    public ConsumedMemoryOwner(IMemoryOwner<T> memoryOwner)
+        : this(memoryOwner, memoryOwner.Memory.Length)
+    {
     }
 
     public void Dispose() =>
