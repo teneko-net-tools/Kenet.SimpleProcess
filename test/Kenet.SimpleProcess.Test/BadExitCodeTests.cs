@@ -14,18 +14,41 @@ namespace Kenet.SimpleProcess.Test
         [Theory]
         [InlineData(new object[] { true })]
         [InlineData(new object[] { false })]
-        public async Task Run_to_completion_should_throw_bad_exit_code(bool synchronously)
+        public async Task Run_to_completion_should_throw_bad_exit_code_with_non_null_original_message(bool synchronously)
         {
             var builder = ProcessExecutorBuilder.CreateDefault(CreateBadExitCodeLeadingProcessStartInfo());
+            BadExitCodeException error;
 
             if (synchronously)
             {
-                builder.Invoking(builder => builder.RunToCompletion()).Should().Throw<BadExitCodeException>();
+                error = builder.Invoking(builder => builder.RunToCompletion()).Should().Throw<BadExitCodeException>().And;
             }
             else
             {
-                await builder.Awaiting(builder => builder.RunToCompletionAsync()).Should().ThrowAsync<BadExitCodeException>();
+                error = (await builder.Awaiting(builder => builder.RunToCompletionAsync()).Should().ThrowAsync<BadExitCodeException>()).And;
             }
+
+            error.ProcessOutput.Should().NotBeNull();
+        }
+
+        [Theory]
+        [InlineData(new object[] { true })]
+        [InlineData(new object[] { false })]
+        public async Task Run_to_completion_should_throw_bad_exit_code_with_null_original_message(bool synchronously)
+        {
+            var builder = new ProcessExecutorBuilder(CreateBadExitCodeLeadingProcessStartInfo()).WithExitCode(0);
+            BadExitCodeException error;
+
+            if (synchronously)
+            {
+                error = builder.Invoking(builder => builder.RunToCompletion()).Should().Throw<BadExitCodeException>().And;
+            }
+            else
+            {
+                error = (await builder.Awaiting(builder => builder.RunToCompletionAsync()).Should().ThrowAsync<BadExitCodeException>()).And;
+            }
+
+            error.ProcessOutput.Should().BeNull();
         }
 
         [Theory]

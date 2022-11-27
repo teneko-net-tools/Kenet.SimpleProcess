@@ -7,20 +7,36 @@ namespace Kenet.SimpleProcess;
 /// </summary>
 public class BadExitCodeException : Exception
 {
-    /// <inheritdoc />
-    public BadExitCodeException()
-    {
-    }
+    internal const string DefaultErrorMessage = "The process exited with a bad exit code";
 
-    /// <inheritdoc />
-    public BadExitCodeException(string? message) : base(message)
-    {
-    }
+    /// <summary>
+    /// The bad exit code.
+    /// </summary>
+    public int? ExitCode { get; init; }
 
-    /// <inheritdoc />
-    public BadExitCodeException(string? message, Exception? innerException) : base(message, innerException)
-    {
-    }
+    /// <summary>
+    /// The process output.
+    /// </summary>
+    public string? ProcessOutput =>
+        _havingProcessOutput ? base.Message : null;
+
+    /// <summary>
+    /// Either the process output message, if not <see langword="null"/> or empty, otherwise a default message as fallback without mentioning of the exit code.
+    /// </summary>
+    public string FallbackMessage =>
+        ProcessOutput == null
+        ? DefaultErrorMessage + " and outputted \"\" (<null>)"
+        : (ProcessOutput.Length == 0
+            ? DefaultErrorMessage + " and outputted \"\" (<empty>)"
+            : ProcessOutput);
+
+    private readonly bool _havingProcessOutput;
+
+    /// <summary>
+    /// The original or fallback message with possible mentioning of the exit code.
+    /// </summary>
+    public override string Message =>
+        FallbackMessage + (ExitCode != null ? $"{Environment.NewLine}Exit Code = {ExitCode}" : string.Empty);
 
     /// <inheritdoc />
     protected BadExitCodeException(SerializationInfo info, StreamingContext context) : base(info, context)
@@ -28,12 +44,17 @@ public class BadExitCodeException : Exception
     }
 
     /// <summary>
-    /// The bad exit code.
+    /// Creates a bad exit code without process output.
     /// </summary>
-    public int? ExitCode { get; init; }
+    public BadExitCodeException()
+    {
+    }
 
     /// <inheritdoc />
-    public override string Message =>
-        (base.Message?.Length == 0 ? "The process exited with bad exit code" : base.Message)
-        + (ExitCode != null ? $"{Environment.NewLine}Exit Code = {ExitCode}" : string.Empty);
+    public BadExitCodeException(string? processOutput) : base(processOutput) =>
+        _havingProcessOutput = processOutput != null;
+
+    /// <inheritdoc />
+    public BadExitCodeException(string? processOutput, Exception? innerException) : base(processOutput, innerException) =>
+        _havingProcessOutput = processOutput != null;
 }
