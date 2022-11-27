@@ -1,4 +1,5 @@
 ﻿using System.Buffers;
+using System.Runtime.InteropServices;
 using System.Text;
 using CommunityToolkit.HighPerformance;
 using CommunityToolkit.HighPerformance.Buffers;
@@ -141,9 +142,12 @@ public sealed class ProcessExecution : IProcessExecution, IAsyncProcessExecution
             return;
         }
 
-        var errorMessage = _errorBuffer != null
-            ? (_exitErrorEncoding ?? Encoding.UTF8).GetString(_errorBuffer.WrittenMemory.GetArrayUnsafe(), 0, _errorBuffer.WrittenCount)
-            : null;
+        string? errorMessage = null;
+
+        if (_errorBuffer != null) {
+            var encoding = _exitErrorEncoding ?? Encoding.UTF8;
+            errorMessage = encoding.GetString(_errorBuffer.WrittenMemory.Span, _errorBuffer.WrittenCount);
+        }
 
         throw new BadExitCodeException(errorMessage) { ExitCode = exitCode };
     }

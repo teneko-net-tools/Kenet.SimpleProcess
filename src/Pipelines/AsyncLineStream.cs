@@ -124,7 +124,7 @@ namespace Kenet.SimpleProcess.Pipelines
 
         private IEnumerable<ConsumedMemoryOwner<byte>> ReadLines(ConsumedMemoryOwner<byte> memoryOwner)
         {
-            var nextSegment = new SequenceSegment(memoryOwner, memoryOwner.Consumed);
+            var nextSegment = new SequenceSegment(memoryOwner, memoryOwner.ConsumedCount);
 
             // If no first segment has been set, we do so
             if (ReferenceEquals(_firstAnchorSegment.Next, _lastAnchorSegment)) {

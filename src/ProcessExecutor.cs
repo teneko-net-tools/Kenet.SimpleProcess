@@ -183,7 +183,7 @@ public sealed class ProcessExecutor :
                 while (await lineStream.WrittenLines.OutputAvailableAsync(linkedCancellationToken).ConfigureAwait(false)) {
                     // When taking, no no blocking wait will be involved due to previous OutputAvailableAsync()
                     using var bytesOwner = lineStream.WrittenLines.Take();
-                    yield return encoding.GetString(bytesOwner.ConsumedMemory.ToArray());
+                    yield return encoding.GetString(bytesOwner.ConsumedMemory.Span, bytesOwner.ConsumedCount);
                 }
             } finally {
                 lineStream.Dispose();

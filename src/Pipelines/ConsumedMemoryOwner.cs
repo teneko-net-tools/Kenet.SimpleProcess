@@ -11,26 +11,26 @@ internal readonly struct ConsumedMemoryOwner<T> : IMemoryOwner<T>
         _memoryOwner.Memory;
 
     public Memory<T> ConsumedMemory =>
-        _memoryOwner.Memory.Slice(0, Consumed);
+        _memoryOwner.Memory.Slice(0, ConsumedCount);
 
     /// <summary>
     /// How much has been consumed.
     /// </summary>
-    public int Consumed { get; }
+    public int ConsumedCount { get; }
 
     private readonly IMemoryOwner<T> _memoryOwner;
 
-    public ConsumedMemoryOwner(IMemoryOwner<T> memoryOwner, int consumed)
+    public ConsumedMemoryOwner(IMemoryOwner<T> memoryOwner, int consumedCount)
     {
         _memoryOwner = memoryOwner ?? throw new ArgumentNullException(nameof(memoryOwner));
 
-        if (consumed < 0) {
+        if (consumedCount < 0) {
             throw new ArgumentOutOfRangeException("Consumed amount cannot be lesser than zero");
-        } else if (consumed > memoryOwner.Memory.Length) {
+        } else if (consumedCount > memoryOwner.Memory.Length) {
             throw new ArgumentOutOfRangeException("Consumed amount cannot be greater than the memory is long");
         }
 
-        Consumed = consumed;
+        ConsumedCount = consumedCount;
     }
     public ConsumedMemoryOwner(IMemoryOwner<T> memoryOwner)
         : this(memoryOwner, memoryOwner.Memory.Length)
