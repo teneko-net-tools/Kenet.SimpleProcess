@@ -179,8 +179,10 @@ public sealed class ProcessExecutor :
                 var execution = await _waitForExecution.Task.WaitAsync(linkedCancellationToken).ConfigureAwait(false);
                 using var cancelOnProcessCancellation = execution.Cancelled.Register(cancellationTokenSource.Cancel);
 
+                // REMINDER: OutputAvailableAsync() won't throw OperationCanceledException, it will just cancel
                 while (await lineStream.WrittenLines.OutputAvailableAsync(linkedCancellationToken).ConfigureAwait(false)) {
-                    using var bytesOwner = await lineStream.WrittenLines.TakeAsync(linkedCancellationToken).ConfigureAwait(false);
+                    // When taking, no no blocking wait will be involved due to previous OutputAvailableAsync()
+                    using var bytesOwner = lineStream.WrittenLines.Take();
                     yield return encoding.GetString(bytesOwner.ConsumedMemory.ToArray());
                 }
             } finally {

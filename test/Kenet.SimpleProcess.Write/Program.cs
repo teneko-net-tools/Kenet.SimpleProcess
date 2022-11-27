@@ -16,7 +16,5 @@ internal class Program
         {
             Console.Write(letter);
         }
-
-        await Task.Delay(-1);
     }
 }

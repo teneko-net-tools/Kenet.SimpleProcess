@@ -8,6 +8,8 @@ namespace Kenet.SimpleProcess.Test
     [Collection(KillingProcessesCollection.CollectionName)]
     public class NeverEndingProcessEOFTests
     {
+        const int _cancelAfter = 1000 * 10;
+
         [Fact]
         public async Task Process_written_fragments_are_correct()
         {
@@ -31,12 +33,8 @@ namespace Kenet.SimpleProcess.Test
                 }
             };
 
-            sleep.Run();
-
-            await Task.Delay(50);
-
-            sleep.Kill();
-            await sleep.RunToCompletionAsync(ProcessCompletionOptions.WaitForExit);
+            sleep.CancelAfter(_cancelAfter);
+            await sleep.RunToCompletionAsync();
 
             string.Concat(bufferBlocks).Should().Be($"{Environment.NewLine}\0Hello");
             reachedEOF.Should().BeTrue();
@@ -52,9 +50,7 @@ namespace Kenet.SimpleProcess.Test
                 .WriteToAsyncLines(x => x.AddOutputWriter, out var asyncLines)
                 .Run();
 
-            await Task.Delay(50);
-
-            sleep.Kill();
+            sleep.CancelAfter(_cancelAfter);
 
             await foreach (var line in asyncLines)
             {
