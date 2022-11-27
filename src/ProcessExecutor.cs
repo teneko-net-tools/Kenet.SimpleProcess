@@ -136,7 +136,7 @@ public sealed class ProcessExecutor :
             void DisposeMemory() => memoryOwner?.Dispose();
 
             try {
-                if (bytes.IsEmpty) {
+                if (bytes.IsEndOfStream()) {
                     lineStream.Complete();
                     return;
                 }

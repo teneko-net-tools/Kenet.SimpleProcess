@@ -22,9 +22,9 @@ internal readonly struct ConsumedMemoryOwner<T> : IMemoryOwner<T>
         _memoryOwner = memoryOwner ?? throw new ArgumentNullException(nameof(memoryOwner));
 
         if (consumed < 0) {
-            throw new ArgumentOutOfRangeException("Consumed amount can now be lesser than zero");
+            throw new ArgumentOutOfRangeException("Consumed amount cannot be lesser than zero");
         } else if (consumed > memoryOwner.Memory.Length) {
-            throw new ArgumentOutOfRangeException("Consumed amount can now be greater than the memory is long");
+            throw new ArgumentOutOfRangeException("Consumed amount cannot be greater than the memory is long");
         }
 
         Consumed = consumed;

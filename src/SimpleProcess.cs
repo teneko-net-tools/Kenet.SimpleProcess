@@ -16,6 +16,7 @@ public sealed class SimpleProcess :
     IRunnable<IAsyncProcessExecution>,
     IRunnable<IAsyncContextlessProcessExecution>
 {
+
     private static readonly TimeSpan _defaultKillTreeTimeout = TimeSpan.FromSeconds(10);
 
     private static async Task ReadStreamAsync(
@@ -23,45 +24,38 @@ public sealed class SimpleProcess :
         WriteHandler writeNextBytes,
         CancellationToken cancellationToken)
     {
-        await Task.Yield();
+        await Task.Yield(); // Yes, no ConfigureAwait(bool)
         var cancellableTaskSource = new TaskCompletionSource<int>();
         var cancellableTask = cancellableTaskSource.Task;
         using var cancelTaskSource = cancellationToken.Register(() => cancellableTaskSource.SetException(new OperationCanceledException(cancellationToken)));
         Task<int>? lastWrittenBytesCountTask = null;
+        using var memoryOwner = MemoryPool<byte>.Shared.Rent(1024 * 4);
 
         try {
             tryReadNext:
 
             if (cancellationToken.IsCancellationRequested) {
-                WriteEOF();
                 return;
             }
 
-            {
-                using var memoryOwner = MemoryPool<byte>.Shared.Rent(1024 * 4);
+            // ISSUE: https://github.com/dotnet/runtime/issues/28583
+            lastWrittenBytesCountTask = await Task.WhenAny(
+                    source.ReadAsync(memoryOwner.Memory, cancellationToken).AsTask(),
+                    cancellableTask)
+                .ConfigureAwait(false);
 
-                // ISSUE: https://github.com/dotnet/runtime/issues/28583
-                lastWrittenBytesCountTask = await Task.WhenAny(
-                        source.ReadAsync(memoryOwner.Memory, cancellationToken).AsTask(),
-                        cancellableTask)
-                    .ConfigureAwait(false);
+            // Call to GetAwaiter.GetResult() unwraps exception, if any
+            var lastWrittenBytesCount = lastWrittenBytesCountTask.GetAwaiter().GetResult();
 
-                // Call to GetAwaiter.GetResult() unwraps exception, if any
-                var lastWrittenBytesCount = lastWrittenBytesCountTask.GetAwaiter().GetResult();
-
-                if (lastWrittenBytesCount != 0) {
-                    writeNextBytes(memoryOwner.Memory.Span[..lastWrittenBytesCount]);
-                    goto tryReadNext;
-                }
-
-                WriteEOF();
+            if (lastWrittenBytesCount != 0) {
+                writeNextBytes(memoryOwner.Memory.Span[..lastWrittenBytesCount]);
+                goto tryReadNext;
             }
         } catch (OperationCanceledException error) when (
             error.CancellationToken.Equals(cancellationToken)) {
-            WriteEOF(); // We canceled ReadAsync ourselves, so we safely can write EOF
+        } finally {
+            writeNextBytes(EOF.Memory.Span);
         }
-
-        void WriteEOF() => writeNextBytes(ReadOnlySpan<byte>.Empty);
     }
 
     /// <summary>

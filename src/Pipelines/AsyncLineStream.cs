@@ -83,17 +83,36 @@ namespace Kenet.SimpleProcess.Pipelines
             var reader = new SequenceReader<byte>(_sequence);
 
             if (reader.TryAdvanceToAny(n_or_r, advancePastDelimiter: false)) {
-                newLineLength = reader.TryPeek(out var next) && next == r && reader.TryPeek(out next) && next == n
+                newLineLength = reader.TryRead(out var next) && next == r && reader.TryRead(out next) && next == n
                     ? (byte)2
                     : (byte)1;
 
-                subSequence = _sequence.Slice(0, reader.Consumed + newLineLength);
+                subSequence = _sequence.Slice(0, reader.Consumed); // Consumed includes newline
                 return true;
             }
 
             subSequence = ReadOnlySequence<byte>.Empty;
             newLineLength = 0;
             return false;
+        }
+
+        private ConsumedMemoryOwner<byte> ReadLine(ReadOnlySequence<byte> line, int newLineLength, bool advanceStream = true)
+        {
+            var longLineLength = line.Length - newLineLength;
+
+            if (longLineLength > int.MaxValue) {
+                throw new OverflowException($"Line length exceeded the total number of {int.MaxValue}");
+            }
+
+            var lineLength = (int)longLineLength;
+            var lineMemoryOwner = MemoryPool<byte>.Shared.Rent(lineLength);
+            line.Slice(0, lineLength).CopyTo(lineMemoryOwner.Memory.Span);
+
+            if (advanceStream) {
+                AdvanceTo(line, advancePastSequence: true);
+            }
+
+            return new ConsumedMemoryOwner<byte>(lineMemoryOwner, lineLength);
         }
 
         private IEnumerable<ConsumedMemoryOwner<byte>> ReadLines(ConsumedMemoryOwner<byte> memoryOwner)
@@ -117,17 +136,7 @@ namespace Kenet.SimpleProcess.Pipelines
             }
 
             while (TrySeekNewLine(out var line, out var newLineLength)) {
-                var longLineLength = line.Length - newLineLength;
-
-                if (longLineLength > int.MaxValue) {
-                    throw new OverflowException($"Line length exceeded the total number of {int.MaxValue}");
-                }
-
-                var lineLength = (int)longLineLength;
-                var lineMemoryOwner = MemoryPool<byte>.Shared.Rent(lineLength);
-                line.Slice(0, lineLength).CopyTo(lineMemoryOwner.Memory.Span);
-                AdvanceTo(line, advancePastSequence: true);
-                yield return new ConsumedMemoryOwner<byte>(lineMemoryOwner, lineLength);
+                yield return ReadLine(line, newLineLength, advanceStream: true);
             }
         }
 
@@ -180,6 +189,25 @@ namespace Kenet.SimpleProcess.Pipelines
                 await Task.WhenAll(writeTasks).ConfigureAwait(false);
             } else {
                 Task.WaitAll(writeTasks.ToArray());
+            }
+
+            // We write directly to underlying buffer
+            try {
+                var line = ReadLine(_sequence, newLineLength: 0, advanceStream: false);
+
+                if (synchronous) {
+                    WrittenLines.Add(line);
+                } else {
+                    await WrittenLines.AddAsync(line);
+                }
+            } catch (Exception error) {
+                var memoryOwner = new ConsumedMemoryOwner<byte>(new ErroneousMemoryOwner<byte>(error), 0);
+
+                if (synchronous) {
+                    WrittenLines.Add(memoryOwner);
+                } else {
+                    await WrittenLines.AddAsync(memoryOwner);
+                }
             }
 
             WrittenLines.CompleteAdding();
