@@ -12,7 +12,7 @@ namespace Kenet.SimpleProcess.Test
             };
 
         [Fact]
-        public async Task Executor_should_read_lines()
+        public async Task Execution_should_read_lines()
         {
             var expectedNumberOfCommits = 5;
 
@@ -21,14 +21,14 @@ namespace Kenet.SimpleProcess.Test
                 .WriteToAsyncLines(x => x.AddOutputWriter, out var lines)
                 .Run();
 
-            var actualNumberOfCommits = 0;
+            var commits = new List<string>();
 
             await foreach (var line in lines)
             {
-                actualNumberOfCommits++;
+                commits.Add(line);
             }
 
-            actualNumberOfCommits.Should().Be(expectedNumberOfCommits);
+            commits.Count.Should().Be(expectedNumberOfCommits);
             execution.IsExited.Should().BeTrue();
         }
     }

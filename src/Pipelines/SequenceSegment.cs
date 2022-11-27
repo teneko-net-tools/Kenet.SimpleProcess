@@ -21,11 +21,16 @@ namespace Kenet.SimpleProcess.Pipelines
 
         private SequenceSegment? _next;
 
-        public SequenceSegment(IMemoryOwner<byte> memoryOwner)
+        public SequenceSegment(IMemoryOwner<byte> memoryOwner, int length)
         {
-            Length = memoryOwner.Memory.Length;
             MemoryOwner = memoryOwner;
+            Length = length;
             UpdateMemory();
+        }
+
+        public SequenceSegment(IMemoryOwner<byte> memoryOwner)
+            : this(memoryOwner, memoryOwner.Memory.Length)
+        {
         }
 
         internal SequenceSegment()

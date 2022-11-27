@@ -1,6 +1,7 @@
 ﻿using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.ExceptionServices;
+using CommunityToolkit.HighPerformance.Buffers;
 using Nito.AsyncEx;
 
 namespace Kenet.SimpleProcess.Pipelines
@@ -11,7 +12,9 @@ namespace Kenet.SimpleProcess.Pipelines
         private static byte r = (byte)'\r';
         private static byte[] n_or_r = new byte[] { n, r };
 
-        public AsyncCollection<IMemoryOwner<byte>> WrittenLines { get; }
+        public AsyncCollection<ConsumedMemoryOwner<byte>> WrittenLines { get; }
+        public bool IsCompleted => _writeTasks is null;
+        public bool IsDisposed => _isDisposed == 1;
 
         private SequenceSegment _firstAnchorSegment;
         private SequenceSegment _firstSegment => _firstAnchorSegment.Next!;
@@ -31,21 +34,21 @@ namespace Kenet.SimpleProcess.Pipelines
             _sequence = new ReadOnlySequence<byte>(_firstAnchorSegment, 0, _lastAnchorSegment, 0);
             _writeLock = new TicketLock();
             _writeTasks = new List<Task>();
-            WrittenLines = new AsyncCollection<IMemoryOwner<byte>>();
+            WrittenLines = new AsyncCollection<ConsumedMemoryOwner<byte>>();
         }
 
         [MemberNotNull(nameof(_writeTasks))]
         private void EnsureNotCompleted()
         {
-            if (_writeTasks is null) {
-                throw new InvalidOperationException("Pipe is already completed.");
+            if (IsCompleted) {
+                throw new AlreadyCompletedException("The stream has been already completed");
             }
         }
 
         private void EnsureNotDisposed()
         {
-            if (_isDisposed == 1) {
-                throw new InvalidOperationException("The pipe has been disposed.");
+            if (IsDisposed) {
+                throw new ObjectDisposedException(objectName: null, "The stream has been disposed");
             }
         }
 
@@ -93,9 +96,9 @@ namespace Kenet.SimpleProcess.Pipelines
             return false;
         }
 
-        private IEnumerable<IMemoryOwner<byte>> ReadLines(IMemoryOwner<byte> memoryOwner)
+        private IEnumerable<ConsumedMemoryOwner<byte>> ReadLines(ConsumedMemoryOwner<byte> memoryOwner)
         {
-            var nextSegment = new SequenceSegment(memoryOwner);
+            var nextSegment = new SequenceSegment(memoryOwner, memoryOwner.Consumed);
 
             // If no first segment has been set, we do so
             if (ReferenceEquals(_firstAnchorSegment.Next, _lastAnchorSegment)) {
@@ -122,19 +125,22 @@ namespace Kenet.SimpleProcess.Pipelines
 
                 var lineLength = (int)longLineLength;
                 var lineMemoryOwner = MemoryPool<byte>.Shared.Rent(lineLength);
-                line.Slice(0, line.Length - newLineLength).CopyTo(lineMemoryOwner.Memory.Span);
+                line.Slice(0, lineLength).CopyTo(lineMemoryOwner.Memory.Span);
                 AdvanceTo(line, advancePastSequence: true);
-                yield return lineMemoryOwner;
+                yield return new ConsumedMemoryOwner<byte>(lineMemoryOwner, lineLength);
             }
-
-
         }
 
-        public void Write(IMemoryOwner<byte> memoryOwner)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="memoryOwner"></param>
+        /// <exception cref="InvalidOperationException"></exception>
+        public void Write(ConsumedMemoryOwner<byte> memoryOwner)
         {
             lock (_writeLock) {
-                EnsureNotCompleted();
                 EnsureNotDisposed();
+                EnsureNotCompleted();
 
                 var ticket = _writeLock.DrawTicket();
 
@@ -147,7 +153,7 @@ namespace Kenet.SimpleProcess.Pipelines
                             WrittenLines.Add(line);
                         }
                     } catch (Exception error) {
-                        WrittenLines.Add(new ErroneousMemoryOwner<byte>(error));
+                        WrittenLines.Add(new ConsumedMemoryOwner<byte>(new ErroneousMemoryOwner<byte>(error), 0));
                     } finally {
                         _writeLock.Exit();
                     }
@@ -160,8 +166,8 @@ namespace Kenet.SimpleProcess.Pipelines
             List<Task> writeTasks;
 
             lock (_writeLock) {
-                EnsureNotCompleted();
                 EnsureNotDisposed();
+                EnsureNotCompleted();
 
                 writeTasks = _writeTasks;
 
