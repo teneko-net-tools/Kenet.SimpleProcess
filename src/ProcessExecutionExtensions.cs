@@ -5,37 +5,37 @@
 /// </summary>
 public static class ProcessExecutionExtensions
 {
-    /// <inheritdoc cref="IContextlessProcessExecution.RunToCompletion(CancellationToken, ProcessCompletionOptions)" path="/summary"/>
-    /// <inheritdoc cref="IContextlessProcessExecution.RunToCompletion(CancellationToken, ProcessCompletionOptions)" path="/param[@name='cancellationToken']"/>
-    /// <inheritdoc cref="IContextlessProcessExecution.RunToCompletion(CancellationToken, ProcessCompletionOptions)" path="/returns"/>
-    public static int RunToCompletion(this IContextlessProcessExecution execution, CancellationToken cancellationToken) =>
+    /// <inheritdoc cref="ICompletableProcessExecution.RunToCompletion(CancellationToken, ProcessCompletionOptions)" path="/summary"/>
+    /// <inheritdoc cref="ICompletableProcessExecution.RunToCompletion(CancellationToken, ProcessCompletionOptions)" path="/param[@name='cancellationToken']"/>
+    /// <inheritdoc cref="ICompletableProcessExecution.RunToCompletion(CancellationToken, ProcessCompletionOptions)" path="/returns"/>
+    public static int RunToCompletion(this ICompletableProcessExecution execution, CancellationToken cancellationToken) =>
         execution.RunToCompletion(cancellationToken, ProcessCompletionOptions.None);
 
-    /// <inheritdoc cref="IContextlessProcessExecution.RunToCompletion(CancellationToken, ProcessCompletionOptions)" path="/summary"/>
-    /// <inheritdoc cref="IContextlessProcessExecution.RunToCompletion(CancellationToken, ProcessCompletionOptions)" path="/returns"/>
-    public static int RunToCompletion(this IContextlessProcessExecution execution) =>
+    /// <inheritdoc cref="ICompletableProcessExecution.RunToCompletion(CancellationToken, ProcessCompletionOptions)" path="/summary"/>
+    /// <inheritdoc cref="ICompletableProcessExecution.RunToCompletion(CancellationToken, ProcessCompletionOptions)" path="/returns"/>
+    public static int RunToCompletion(this ICompletableProcessExecution execution) =>
         execution.RunToCompletion(CancellationToken.None, ProcessCompletionOptions.None);
 
-    /// <inheritdoc cref="IContextlessProcessExecution.RunToCompletion(CancellationToken, ProcessCompletionOptions)" path="/summary"/>
-    /// <inheritdoc cref="IContextlessProcessExecution.RunToCompletion(CancellationToken, ProcessCompletionOptions)" path="/param[@name='completionOptions']"/>
-    /// <inheritdoc cref="IContextlessProcessExecution.RunToCompletion(CancellationToken, ProcessCompletionOptions)" path="/returns"/>
-    public static int RunToCompletion(this IContextlessProcessExecution execution, ProcessCompletionOptions completionOptions) =>
+    /// <inheritdoc cref="ICompletableProcessExecution.RunToCompletion(CancellationToken, ProcessCompletionOptions)" path="/summary"/>
+    /// <inheritdoc cref="ICompletableProcessExecution.RunToCompletion(CancellationToken, ProcessCompletionOptions)" path="/param[@name='completionOptions']"/>
+    /// <inheritdoc cref="ICompletableProcessExecution.RunToCompletion(CancellationToken, ProcessCompletionOptions)" path="/returns"/>
+    public static int RunToCompletion(this ICompletableProcessExecution execution, ProcessCompletionOptions completionOptions) =>
         execution.RunToCompletion(CancellationToken.None, completionOptions);
 
-    /// <inheritdoc cref="IAsyncContextlessProcessExecution.RunToCompletionAsync(CancellationToken, ProcessCompletionOptions)" path="/summary"/>
-    /// <inheritdoc cref="IAsyncContextlessProcessExecution.RunToCompletionAsync(CancellationToken, ProcessCompletionOptions)" path="/param[@name='cancellationToken']"/>
-    /// <inheritdoc cref="IAsyncContextlessProcessExecution.RunToCompletionAsync(CancellationToken, ProcessCompletionOptions)" path="/returns"/>
-    public static Task<int> RunToCompletionAsync(this IAsyncContextlessProcessExecution execution, CancellationToken cancellationToken) =>
+    /// <inheritdoc cref="IAsyncCompletableProcessExecution.RunToCompletionAsync(CancellationToken, ProcessCompletionOptions)" path="/summary"/>
+    /// <inheritdoc cref="IAsyncCompletableProcessExecution.RunToCompletionAsync(CancellationToken, ProcessCompletionOptions)" path="/param[@name='cancellationToken']"/>
+    /// <inheritdoc cref="IAsyncCompletableProcessExecution.RunToCompletionAsync(CancellationToken, ProcessCompletionOptions)" path="/returns"/>
+    public static Task<int> RunToCompletionAsync(this IAsyncCompletableProcessExecution execution, CancellationToken cancellationToken) =>
         execution.RunToCompletionAsync(cancellationToken, ProcessCompletionOptions.None);
 
-    /// <inheritdoc cref="IAsyncContextlessProcessExecution.RunToCompletionAsync(CancellationToken, ProcessCompletionOptions)" path="/summary"/>
-    /// <inheritdoc cref="IAsyncContextlessProcessExecution.RunToCompletionAsync(CancellationToken, ProcessCompletionOptions)" path="/returns"/>
-    public static Task<int> RunToCompletionAsync(this IAsyncContextlessProcessExecution execution) =>
+    /// <inheritdoc cref="IAsyncCompletableProcessExecution.RunToCompletionAsync(CancellationToken, ProcessCompletionOptions)" path="/summary"/>
+    /// <inheritdoc cref="IAsyncCompletableProcessExecution.RunToCompletionAsync(CancellationToken, ProcessCompletionOptions)" path="/returns"/>
+    public static Task<int> RunToCompletionAsync(this IAsyncCompletableProcessExecution execution) =>
         execution.RunToCompletionAsync(CancellationToken.None, ProcessCompletionOptions.None);
 
-    /// <inheritdoc cref="IAsyncContextlessProcessExecution.RunToCompletionAsync(CancellationToken, ProcessCompletionOptions)" path="/summary"/>
-    /// <inheritdoc cref="IAsyncContextlessProcessExecution.RunToCompletionAsync(CancellationToken, ProcessCompletionOptions)" path="/param[@name='completionOptions']"/>
-    /// <inheritdoc cref="IAsyncContextlessProcessExecution.RunToCompletionAsync(CancellationToken, ProcessCompletionOptions)" path="/returns"/>
-    public static Task<int> RunToCompletionAsync(this IAsyncContextlessProcessExecution execution, ProcessCompletionOptions completionOptions) =>
+    /// <inheritdoc cref="IAsyncCompletableProcessExecution.RunToCompletionAsync(CancellationToken, ProcessCompletionOptions)" path="/summary"/>
+    /// <inheritdoc cref="IAsyncCompletableProcessExecution.RunToCompletionAsync(CancellationToken, ProcessCompletionOptions)" path="/param[@name='completionOptions']"/>
+    /// <inheritdoc cref="IAsyncCompletableProcessExecution.RunToCompletionAsync(CancellationToken, ProcessCompletionOptions)" path="/returns"/>
+    public static Task<int> RunToCompletionAsync(this IAsyncCompletableProcessExecution execution, ProcessCompletionOptions completionOptions) =>
         execution.RunToCompletionAsync(CancellationToken.None, completionOptions);
 }

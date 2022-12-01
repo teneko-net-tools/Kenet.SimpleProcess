@@ -1,15 +1,15 @@
 ﻿namespace Kenet.SimpleProcess;
 
 /// <summary>
-/// Extension methods for <see cref="IRunnable{T}"/> with T of <see cref="IContextlessProcessExecution"/>
-/// and <see cref="IRunnable{T}"/> with T of <see cref="IAsyncContextlessProcessExecution"/>.
+/// Extension methods for <see cref="IRunnable{T}"/> with T of <see cref="ICompletableProcessExecution"/>
+/// and <see cref="IRunnable{T}"/> with T of <see cref="IAsyncCompletableProcessExecution"/>.
 /// </summary>
 public static class RunnableProcessExecutionExtensions
 {
     private static readonly ProcessCompletionOptions _fireAndForgetCompletionOptions =
         ProcessCompletionOptions.KillTreeOnCancellation;
 
-    /// <inheritdoc cref="IContextlessProcessExecution.RunToCompletion(CancellationToken, ProcessCompletionOptions)"/>
+    /// <inheritdoc cref="ICompletableProcessExecution.RunToCompletion(CancellationToken, ProcessCompletionOptions)"/>
     public static int RunToCompletion(this IRunnable<IProcessExecution> process, CancellationToken cancellationToken, ProcessCompletionOptions completionOptions)
     {
         using var execution = process.Run();
@@ -17,12 +17,12 @@ public static class RunnableProcessExecutionExtensions
     }
 
     /// <summary>
-    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletion(IContextlessProcessExecution, CancellationToken)" path="/summary"/>
-    /// Because this method is a shortcut of <see cref="IContextlessProcessExecution.RunToCompletion(CancellationToken, ProcessCompletionOptions)"/>,
-    /// you won't be able to dispose the instance of type <see cref="IContextlessProcessExecution"/>. Therefore we kill the entire tree and dispose the
+    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletion(ICompletableProcessExecution, CancellationToken)" path="/summary"/>
+    /// Because this method is a shortcut of <see cref="ICompletableProcessExecution.RunToCompletion(CancellationToken, ProcessCompletionOptions)"/>,
+    /// you won't be able to dispose the instance of type <see cref="ICompletableProcessExecution"/>. Therefore we kill the entire tree and dispose the
     /// process after the completion.
     /// </summary>
-    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletion(IContextlessProcessExecution, CancellationToken)"/>
+    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletion(ICompletableProcessExecution, CancellationToken)"/>
     public static int RunToCompletion(this IRunnable<IProcessExecution> process, CancellationToken cancellationToken) =>
          RunToCompletion(process, cancellationToken, _fireAndForgetCompletionOptions);
 
@@ -30,11 +30,11 @@ public static class RunnableProcessExecutionExtensions
     public static int RunToCompletion(this IRunnable<IProcessExecution> process) =>
          RunToCompletion(process, CancellationToken.None, _fireAndForgetCompletionOptions);
 
-    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletion(IContextlessProcessExecution, ProcessCompletionOptions)"/>
+    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletion(ICompletableProcessExecution, ProcessCompletionOptions)"/>
     public static int RunToCompletion(this IRunnable<IProcessExecution> process, ProcessCompletionOptions completionOptions) =>
         RunToCompletion(process, CancellationToken.None, completionOptions);
 
-    /// <inheritdoc cref="IAsyncContextlessProcessExecution.RunToCompletionAsync(CancellationToken, ProcessCompletionOptions)"/>
+    /// <inheritdoc cref="IAsyncCompletableProcessExecution.RunToCompletionAsync(CancellationToken, ProcessCompletionOptions)"/>
     public static async Task<int> RunToCompletionAsync(this IRunnable<IAsyncProcessExecution> process, CancellationToken cancellationToken, ProcessCompletionOptions completionOptions)
     {
         using var execution = process.Run();
@@ -42,12 +42,12 @@ public static class RunnableProcessExecutionExtensions
     }
 
     /// <summary>
-    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletionAsync(IAsyncContextlessProcessExecution, CancellationToken)" path="/summary"/>
-    /// Because this method is a shortcut of <see cref="IAsyncContextlessProcessExecution.RunToCompletionAsync(CancellationToken, ProcessCompletionOptions)"/>,
-    /// you won't be able to dispose the instance of type <see cref="IAsyncContextlessProcessExecution"/>. Therefore we kill the entire tree and dispose the
+    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletionAsync(IAsyncCompletableProcessExecution, CancellationToken)" path="/summary"/>
+    /// Because this method is a shortcut of <see cref="IAsyncCompletableProcessExecution.RunToCompletionAsync(CancellationToken, ProcessCompletionOptions)"/>,
+    /// you won't be able to dispose the instance of type <see cref="IAsyncCompletableProcessExecution"/>. Therefore we kill the entire tree and dispose the
     /// process after the completion.
     /// </summary>
-    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletionAsync(IAsyncContextlessProcessExecution, CancellationToken)"/>
+    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletionAsync(IAsyncCompletableProcessExecution, CancellationToken)"/>
     public static Task<int> RunToCompletionAsync(this IRunnable<IAsyncProcessExecution> process, CancellationToken cancellationToken) =>
         RunToCompletionAsync(process, cancellationToken, _fireAndForgetCompletionOptions);
 
@@ -55,7 +55,7 @@ public static class RunnableProcessExecutionExtensions
     public static Task<int> RunToCompletionAsync(this IRunnable<IAsyncProcessExecution> process) =>
         RunToCompletionAsync(process, CancellationToken.None, _fireAndForgetCompletionOptions);
 
-    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletionAsync(IAsyncContextlessProcessExecution, ProcessCompletionOptions)"/>
+    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletionAsync(IAsyncCompletableProcessExecution, ProcessCompletionOptions)"/>
     public static Task<int> RunToCompletionAsync(this IRunnable<IAsyncProcessExecution> process, ProcessCompletionOptions completionOptions) =>
         RunToCompletionAsync(process, CancellationToken.None, completionOptions);
 }

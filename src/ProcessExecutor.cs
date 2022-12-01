@@ -11,9 +11,9 @@ namespace Kenet.SimpleProcess;
 /// </summary>
 public sealed class ProcessExecutor :
     IRunnable<IProcessExecution>,
-    IRunnable<IContextlessProcessExecution>,
+    IRunnable<ICompletableProcessExecution>,
     IRunnable<IAsyncProcessExecution>,
-    IRunnable<IAsyncContextlessProcessExecution>,
+    IRunnable<IAsyncCompletableProcessExecution>,
     IProcessExecutorMutator
 {
     private readonly SealableProcessExecutorArtifact _artifact;
@@ -234,12 +234,12 @@ public sealed class ProcessExecutor :
     IProcessExecution IRunnable<IProcessExecution>.Run() =>
         Run();
 
-    IContextlessProcessExecution IRunnable<IContextlessProcessExecution>.Run() =>
+    ICompletableProcessExecution IRunnable<ICompletableProcessExecution>.Run() =>
         Run();
 
     IAsyncProcessExecution IRunnable<IAsyncProcessExecution>.Run() =>
         Run();
 
-    IAsyncContextlessProcessExecution IRunnable<IAsyncContextlessProcessExecution>.Run() =>
+    IAsyncCompletableProcessExecution IRunnable<IAsyncCompletableProcessExecution>.Run() =>
         Run();
 }

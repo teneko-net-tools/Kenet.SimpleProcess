@@ -12,9 +12,9 @@ public sealed class SimpleProcess :
     IProcessExecution,
     IAsyncProcessExecution,
     IRunnable<IProcessExecution>,
-    IRunnable<IContextlessProcessExecution>,
+    IRunnable<ICompletableProcessExecution>,
     IRunnable<IAsyncProcessExecution>,
-    IRunnable<IAsyncContextlessProcessExecution>
+    IRunnable<IAsyncCompletableProcessExecution>
 {
 
     private static readonly TimeSpan _defaultKillTreeTimeout = TimeSpan.FromSeconds(10);
@@ -272,7 +272,7 @@ public sealed class SimpleProcess :
         return this;
     }
 
-    IContextlessProcessExecution IRunnable<IContextlessProcessExecution>.Run()
+    ICompletableProcessExecution IRunnable<ICompletableProcessExecution>.Run()
     {
         Run();
         return this;
@@ -284,7 +284,7 @@ public sealed class SimpleProcess :
         return this;
     }
 
-    IAsyncContextlessProcessExecution IRunnable<IAsyncContextlessProcessExecution>.Run()
+    IAsyncCompletableProcessExecution IRunnable<IAsyncCompletableProcessExecution>.Run()
     {
         Run();
         return this;
@@ -476,15 +476,15 @@ public sealed class SimpleProcess :
     public int RunToCompletion(CancellationToken cancellationToken, ProcessCompletionOptions completionOptions) =>
         RunToCompletionAsync(synchronously: true, cancellationToken, completionOptions).GetAwaiter().GetResult();
 
-    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletion(IContextlessProcessExecution, CancellationToken)"/>
+    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletion(ICompletableProcessExecution, CancellationToken)"/>
     public int RunToCompletion(CancellationToken cancellationToken) =>
         RunToCompletion(cancellationToken, ProcessCompletionOptions.None);
 
-    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletion(IContextlessProcessExecution, CancellationToken)"/>
+    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletion(ICompletableProcessExecution, CancellationToken)"/>
     public int RunToCompletion() =>
         RunToCompletion(CancellationToken.None, ProcessCompletionOptions.None);
 
-    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletion(IContextlessProcessExecution, ProcessCompletionOptions)"/>
+    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletion(ICompletableProcessExecution, ProcessCompletionOptions)"/>
     public int RunToCompletion(ProcessCompletionOptions completionOptions) =>
         RunToCompletion(CancellationToken.None, completionOptions);
 
@@ -492,15 +492,15 @@ public sealed class SimpleProcess :
     public Task<int> RunToCompletionAsync(CancellationToken cancellationToken, ProcessCompletionOptions completionOptions) =>
         RunToCompletionAsync(synchronously: false, cancellationToken, completionOptions);
 
-    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletionAsync(IAsyncContextlessProcessExecution, CancellationToken)"/>
+    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletionAsync(IAsyncCompletableProcessExecution, CancellationToken)"/>
     public Task<int> RunToCompletionAsync(CancellationToken cancellationToken) =>
         RunToCompletionAsync(cancellationToken, ProcessCompletionOptions.None);
 
-    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletionAsync(IAsyncContextlessProcessExecution, CancellationToken)"/>
+    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletionAsync(IAsyncCompletableProcessExecution, CancellationToken)"/>
     public Task<int> RunToCompletionAsync() =>
         RunToCompletionAsync(CancellationToken.None, ProcessCompletionOptions.None);
 
-    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletionAsync(IAsyncContextlessProcessExecution, ProcessCompletionOptions)"/>
+    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletionAsync(IAsyncCompletableProcessExecution, ProcessCompletionOptions)"/>
     public Task<int> RunToCompletionAsync(ProcessCompletionOptions completionOptions) =>
         RunToCompletionAsync(CancellationToken.None, completionOptions);
 
