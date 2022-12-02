@@ -200,24 +200,6 @@ public sealed class SimpleProcess :
 
             void OnProcessExited(object? sender, EventArgs e)
             {
-                //// See this for more info: https://github.com/dotnet/runtime/issues/51277
-                //void CloseProcess()
-                //{
-                //    const BindingFlags bindingFlags = BindingFlags.NonPublic | BindingFlags.Instance;
-                //    var outputField = typeof(Process).GetField("_output", bindingFlags) ?? typeof(Process).GetField("output", bindingFlags) ?? throw new InvalidOperationException();
-                //    var errorField = typeof(Process).GetField("_error", bindingFlags) ?? typeof(Process).GetField("error", bindingFlags) ?? throw new InvalidOperationException();
-                //    ((IDisposable?)outputField!.GetValue(process))?.Dispose();
-                //    ((IDisposable?)errorField!.GetValue(process))?.Dispose();
-                //}
-
-                //process.Exited -= OnProcessExited;
-
-                //try {
-                //    CloseProcess();
-                //} catch {
-                //    ; // Fire and forget
-                //}
-
                 IsExited = true;
 
                 if (IsDisposed) {
@@ -239,6 +221,7 @@ public sealed class SimpleProcess :
 
             Id = process.Id;
             IsRunning = true;
+            _processStartedTokenSource.Cancel();
 
             /* REMINDER: Exiting token is hitting faster than stream can be read, so don't use it */
 
@@ -251,11 +234,6 @@ public sealed class SimpleProcess :
                 : Task.CompletedTask;
         }
     }
-
-    //private void StartProcessExitWatcher()
-    //{
-
-    //}
 
     [MemberNotNull(nameof(_process), nameof(_readOutputTask), nameof(_readErrorTask))]
     private void Run(out Process process)

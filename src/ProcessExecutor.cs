@@ -131,6 +131,7 @@ public sealed class ProcessExecutor :
     public ProcessExecutor WriteToAsyncLines(Func<ProcessExecutor, Func<WriteHandler, object>> readFrom, out IAsyncEnumerable<string> asyncLines, Encoding encoding, ProcessBoundary boundary)
     {
         var readCancellationTokenSource = new CancellationTokenSource();
+        var isReadCancellationTokenSourceDisposed = false;
         var readCancellationToken = readCancellationTokenSource.Token;
         var lineStream = new AsyncLineStream();
 
@@ -159,7 +160,13 @@ public sealed class ProcessExecutor :
                     return;
                 }
 
-                readCancellationTokenSource.Cancel();
+                lock (readCancellationTokenSource) {
+                    if (!isReadCancellationTokenSourceDisposed) {
+                        readCancellationTokenSource.Cancel();
+                        readCancellationTokenSource.Dispose();
+                        isReadCancellationTokenSourceDisposed = true;
+                    }
+                }
             }
         });
 
@@ -194,7 +201,13 @@ public sealed class ProcessExecutor :
                     yield return encoding.GetString(bytesOwner.ConsumedMemory.Span, bytesOwner.ConsumedCount);
                 }
             } finally {
-                readCancellationTokenSource.Dispose();
+                lock (readCancellationTokenSource) {
+                    if (!isReadCancellationTokenSourceDisposed) {
+                        readCancellationTokenSource.Dispose();
+                        isReadCancellationTokenSourceDisposed = true;
+                    }
+                }
+
                 lineStream.Dispose();
                 cancellationOnBoundaryExceeding?.Dispose();
                 boundaryAssociation.Dispose();
