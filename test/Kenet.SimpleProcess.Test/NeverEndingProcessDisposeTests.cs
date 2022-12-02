@@ -10,12 +10,11 @@ namespace Kenet.SimpleProcess.Test
         [Theory]
         [InlineData(new object[] { true })]
         [InlineData(new object[] { false })]
-        public async Task Process_should_release_run_for_completion_when_disposed(bool synchronously)
+        public async Task Process_should_release_run_for_completion_when_disposedAsync(bool synchronously)
         {
             using var sleep = new SimpleProcess(CreateSleepStartInfo());
 
-            _ = Task.Run(async () =>
-            {
+            _ = Task.Run(async () => {
                 await Task.Delay(100);
                 sleep.Dispose();
             });
@@ -24,12 +23,9 @@ namespace Kenet.SimpleProcess.Test
 
             OperationCanceledException operationCanceledException;
 
-            if (synchronously)
-            {
+            if (synchronously) {
                 operationCanceledException = sleep.Invoking(x => x.RunToCompletion(canceller.Token)).Should().Throw<OperationCanceledException>().And;
-            }
-            else
-            {
+            } else {
                 operationCanceledException = (await sleep.Awaiting(x => x.RunToCompletionAsync(canceller.Token)).Should().ThrowAsync<OperationCanceledException>()).And;
             }
 

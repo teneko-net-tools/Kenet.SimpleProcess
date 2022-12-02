@@ -7,10 +7,8 @@ namespace Kenet.SimpleProcess.Test
         [Fact]
         public unsafe void Builtin_empty_span_poiner_is_null()
         {
-            fixed (byte* builtinEmptyPtr = &MemoryMarshal.GetReference(Span<byte>.Empty))
-            {
-                if (builtinEmptyPtr == null)
-                {
+            fixed (byte* builtinEmptyPtr = &MemoryMarshal.GetReference(Span<byte>.Empty)) {
+                if (builtinEmptyPtr == null) {
                     return;
                 }
             }
@@ -23,10 +21,8 @@ namespace Kenet.SimpleProcess.Test
         {
             var empty = new byte[0];
 
-            fixed (byte* emptyPtr = &MemoryMarshal.GetReference(new Span<byte>(empty)))
-            {
-                if (emptyPtr != null)
-                {
+            fixed (byte* emptyPtr = &MemoryMarshal.GetReference(new Span<byte>(empty))) {
+                if (emptyPtr != null) {
                     return;
                 }
             }
@@ -40,12 +36,9 @@ namespace Kenet.SimpleProcess.Test
             var empty1 = new byte[0];
             var empty2 = new byte[0];
 
-            fixed (byte* empty1Ptr = &MemoryMarshal.GetReference(new Span<byte>(empty1)))
-            {
-                fixed (byte* empty2Ptr = &MemoryMarshal.GetReference(new Span<byte>(empty2)))
-                {
-                    if (empty1Ptr != empty2Ptr)
-                    {
+            fixed (byte* empty1Ptr = &MemoryMarshal.GetReference(new Span<byte>(empty1))) {
+                fixed (byte* empty2Ptr = &MemoryMarshal.GetReference(new Span<byte>(empty2))) {
+                    if (empty1Ptr != empty2Ptr) {
                         return;
                     }
                 }
@@ -59,13 +52,10 @@ namespace Kenet.SimpleProcess.Test
         {
             var empty = new byte[0];
 
-            fixed (byte* empty1Ptr = &MemoryMarshal.GetReference(new Span<byte>(empty)))
-            {
-                fixed (byte* empty2Ptr = &MemoryMarshal.GetReference(new Span<byte>(empty)))
-                {
+            fixed (byte* empty1Ptr = &MemoryMarshal.GetReference(new Span<byte>(empty))) {
+                fixed (byte* empty2Ptr = &MemoryMarshal.GetReference(new Span<byte>(empty))) {
                     // We may use this to distinguish between any empty span and unique EOF
-                    if (empty1Ptr == empty2Ptr)
-                    {
+                    if (empty1Ptr == empty2Ptr) {
                         return;
                     }
                 }

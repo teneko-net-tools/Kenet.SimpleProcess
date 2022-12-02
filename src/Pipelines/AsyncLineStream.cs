@@ -1,16 +1,15 @@
 ﻿using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.ExceptionServices;
-using CommunityToolkit.HighPerformance.Buffers;
 using Nito.AsyncEx;
 
 namespace Kenet.SimpleProcess.Pipelines
 {
     internal sealed class AsyncLineStream : IDisposable
     {
-        private static byte n = (byte)'\n';
-        private static byte r = (byte)'\r';
-        private static byte[] n_or_r = new byte[] { n, r };
+        private static readonly byte _n = (byte)'\n';
+        private static readonly byte _r = (byte)'\r';
+        private static readonly byte[] _n_or_r = new byte[] { _n, _r };
 
         public AsyncCollection<ConsumedMemoryOwner<byte>> WrittenLines { get; }
         public bool IsCompleted => _writeTasks is null;
@@ -54,18 +53,18 @@ namespace Kenet.SimpleProcess.Pipelines
         }
 
         /// <summary>
-        /// 
+        /// Advances prior or past <paramref name="line"/>.
         /// </summary>
-        /// <param name="subSequence">The sub-sequence of <see cref="_sequence"/>.</param>
-        /// <param name="advancePastSequence"></param>
+        /// <param name="line">The sub-sequence of <see cref="_sequence"/>.</param>
+        /// <param name="advancePastLine"></param>
         /// <exception cref="ArgumentNullException"></exception>
-        private void AdvanceTo(in ReadOnlySequence<byte> subSequence, bool advancePastSequence)
+        private void AdvanceTo(in ReadOnlySequence<byte> line, bool advancePastLine)
         {
-            if (subSequence.Equals(default)) {
-                throw new ArgumentNullException(nameof(subSequence));
+            if (line.Equals(default)) {
+                throw new ArgumentNullException(nameof(line));
             }
 
-            var advancePosition = advancePastSequence ? subSequence.End : subSequence.Start;
+            var advancePosition = advancePastLine ? line.End : line.Start;
             var segmentToBeAdvancedTo = (SequenceSegment)advancePosition.GetObject()!;
             var segmentStartIndex = advancePosition.GetInteger();
 
@@ -79,20 +78,20 @@ namespace Kenet.SimpleProcess.Pipelines
         // \n (Unix)
         // \r\n (Window)
         // \r (MacOS)
-        private bool TrySeekNewLine(out ReadOnlySequence<byte> subSequence, out byte newLineLength)
+        private bool TrySeekNewLine(out ReadOnlySequence<byte> line, out byte newLineLength)
         {
             var reader = new SequenceReader<byte>(_sequence);
 
-            if (reader.TryAdvanceToAny(n_or_r, advancePastDelimiter: false)) {
-                newLineLength = reader.TryRead(out var next) && next == r && reader.TryRead(out next) && next == n
+            if (reader.TryAdvanceToAny(_n_or_r, advancePastDelimiter: false)) {
+                newLineLength = reader.TryRead(out var next) && next == _r && reader.TryRead(out next) && next == _n
                     ? (byte)2
                     : (byte)1;
 
-                subSequence = _sequence.Slice(0, reader.Consumed); // Consumed includes newline
+                line = _sequence.Slice(0, reader.Consumed); // Consumed includes newline
                 return true;
             }
 
-            subSequence = ReadOnlySequence<byte>.Empty;
+            line = ReadOnlySequence<byte>.Empty;
             newLineLength = 0;
             return false;
         }
@@ -115,7 +114,7 @@ namespace Kenet.SimpleProcess.Pipelines
             line.Slice(0, lineLength).CopyTo(lineMemoryOwner.Memory.Span);
 
             if (advanceStream) {
-                AdvanceTo(line, advancePastSequence: true);
+                AdvanceTo(line, advancePastLine: true);
             }
 
             memoryOwner = new ConsumedMemoryOwner<byte>(lineMemoryOwner, lineLength);
@@ -143,9 +142,9 @@ namespace Kenet.SimpleProcess.Pipelines
             }
 
             while (TrySeekNewLine(out var line, out var newLineLength)) {
-                if (TryReadLine(out memoryOwner, line, newLineLength, advanceStream: true)) {
+                if (TryReadLine(out var lineOwner, line, newLineLength, advanceStream: true)) {
                     _isLastLinePending = true;
-                    yield return memoryOwner;
+                    yield return lineOwner;
                 }
             }
         }
@@ -234,6 +233,9 @@ namespace Kenet.SimpleProcess.Pipelines
             if (Interlocked.CompareExchange(ref _isDisposed, 1, 0) == 1) {
                 return;
             }
+
+            // Ensures we "Cancel" waiting operations of WrittenLines, if not done previously
+            WrittenLines.CompleteAdding();
 
             _firstSegment?.DisposeUntil(_lastAnchorSegment);
             _firstAnchorSegment = null!;

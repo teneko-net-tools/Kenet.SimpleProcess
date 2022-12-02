@@ -12,11 +12,8 @@ public sealed class SimpleProcess :
     IProcessExecution,
     IAsyncProcessExecution,
     IRunnable<IProcessExecution>,
-    IRunnable<ICompletableProcessExecution>,
-    IRunnable<IAsyncProcessExecution>,
-    IRunnable<IAsyncCompletableProcessExecution>
+    IRunnable<IAsyncProcessExecution>
 {
-
     private static readonly TimeSpan _defaultKillTreeTimeout = TimeSpan.FromSeconds(10);
 
     private static async Task ReadStreamAsync(
@@ -24,7 +21,7 @@ public sealed class SimpleProcess :
         WriteHandler writeNextBytes,
         CancellationToken cancellationToken)
     {
-        await Task.Yield(); // Yes, no ConfigureAwait(bool)
+        await Task.Yield(); // No ConfigureAwait(bool) available
         var cancellableTaskSource = new TaskCompletionSource<int>();
         var cancellableTask = cancellableTaskSource.Task;
         using var cancelTaskSource = cancellationToken.Register(() => cancellableTaskSource.SetException(new OperationCanceledException(cancellationToken)));
@@ -63,6 +60,8 @@ public sealed class SimpleProcess :
     /// </summary>
     public SimpleProcessStartInfo StartInfo { get; }
 
+    private readonly CancellationTokenSource _processStartedTokenSource;
+
     /// <summary>
     /// The buffer the process will write incoming error to.
     /// </summary>
@@ -90,10 +89,13 @@ public sealed class SimpleProcess :
     }
 
     /// <inheritdoc/>
-    public CancellationToken Exited { get; }
+    public CancellationToken Started { get; }
 
     /// <inheritdoc/>
     public CancellationToken Cancelled { get; }
+
+    /// <inheritdoc/>
+    public CancellationToken Exited { get; }
 
     /// <inheritdoc/>
     public bool IsExited { get; private set; }
@@ -124,6 +126,9 @@ public sealed class SimpleProcess :
     {
         StartInfo = startInfo ?? throw new ArgumentNullException(nameof(startInfo));
 
+        _processStartedTokenSource = new CancellationTokenSource();
+        Started = _processStartedTokenSource.Token;
+
         /* REMINDER: When the process exited, the readers may not yet have processed all bytes so far,
          * so it may occur, that the readers get canceled before the last bytes are read. Therefore
          * the cancelled token source should not be canceled when exited. */
@@ -136,7 +141,6 @@ public sealed class SimpleProcess :
         // REMINDER: process exit should trigger process cancellation, but the other way around should the process cancellation not
         // influence the process exit.
         _processExitedTokenSource = new CancellationTokenSource();
-
         Exited = _processExitedTokenSource.Token;
     }
 
@@ -157,6 +161,7 @@ public sealed class SimpleProcess :
         }
     }
 
+    [MemberNotNull(nameof(_process))]
     private void CreateProcess(out Process process)
     {
         var currentProcess = _process;
@@ -272,19 +277,7 @@ public sealed class SimpleProcess :
         return this;
     }
 
-    ICompletableProcessExecution IRunnable<ICompletableProcessExecution>.Run()
-    {
-        Run();
-        return this;
-    }
-
     IAsyncProcessExecution IRunnable<IAsyncProcessExecution>.Run()
-    {
-        Run();
-        return this;
-    }
-
-    IAsyncCompletableProcessExecution IRunnable<IAsyncCompletableProcessExecution>.Run()
     {
         Run();
         return this;
@@ -336,21 +329,6 @@ public sealed class SimpleProcess :
 
             _processCancellationTokenSource.CancelAfter(delay);
         }
-    }
-
-    private static bool CancellationTokenIsAssociatedWithError(Exception error, CancellationToken cancellationToken)
-    {
-        if (!cancellationToken.CanBeCanceled) {
-            return false;
-        }
-
-        if (error is not OperationCanceledException operationCanceledError) {
-            return false;
-        }
-
-        var isTokenWithErrorAssociated = false;
-        ProcessBoundary.DisposeOrFailSilently(cancellationToken.Register(() => isTokenWithErrorAssociated = true));
-        return isTokenWithErrorAssociated;
     }
 
     private async Task<int> RunToCompletionAsync(
@@ -456,9 +434,8 @@ public sealed class SimpleProcess :
             _exitCode ??= process.ExitCode;
         } catch (Exception error) {
             if (completionOptions != ProcessCompletionOptions.None
-                // Either method-scoped cancellation token or
-                && (CancellationTokenIsAssociatedWithError(error, cancellationToken)
-                    || CancellationTokenIsAssociatedWithError(error, newCancellationToken))) {
+                && error is OperationCanceledException
+                && newCancellationToken.IsCancellationRequested) {
                 if (completionOptions.HasFlag(ProcessCompletionOptions.KillTreeOnCancellation)) {
                     Kill(entireProcessTree: true);
                 } else if (completionOptions.HasFlag(ProcessCompletionOptions.KillOnCancellation)) {
@@ -549,6 +526,7 @@ public sealed class SimpleProcess :
         Cancel();
 
         _process?.Dispose();
+        _processStartedTokenSource.Dispose();
 
         // It can happen, that someone is in Cancel()
         lock (_processCancellationTokenSource) {

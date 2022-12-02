@@ -43,7 +43,9 @@ public interface IExecutingProcess : IProcessInfo
     /// <inheritdoc cref="Process.Kill()"/>
     void Kill();
 
+    /// <summary>
     /// Immediatelly stops the associated process, and optionally its child/descendant processes.
+    /// </summary>
     /// <param name="entireProcessTree">
     /// <see langword="true"/> to kill the associated process and its descendants;
     /// <see langword="false"/> to kill only the associated process.

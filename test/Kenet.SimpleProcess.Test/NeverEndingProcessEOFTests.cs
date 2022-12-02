@@ -1,6 +1,6 @@
-﻿using FluentAssertions;
+﻿using System.Text;
+using FluentAssertions;
 using Kenet.SimpleProcess.Test.Infrastructure;
-using System.Text;
 using static Kenet.SimpleProcess.Test.Infrastructure.WriteCommand;
 
 namespace Kenet.SimpleProcess.Test
@@ -8,25 +8,20 @@ namespace Kenet.SimpleProcess.Test
     [Collection(KillingProcessesCollection.CollectionName)]
     public class NeverEndingProcessEOFTests
     {
-        const int _cancelAfter = 1000 * 10;
+        private const int _cancelAfter = 1000 * 10;
 
         [Fact]
-        public async Task Process_written_fragments_are_correct()
+        public async Task Process_written_fragments_are_correctAsync()
         {
             var bufferBlocks = new List<string>();
             var numberOfBytes = 0;
             var reachedEOF = false;
 
-            using var sleep = new SimpleProcess(CreateWriteStartInfo())
-            {
-                OutputWriter = bytes =>
-                {
-                    if (bytes.IsEndOfStream())
-                    {
+            using var sleep = new SimpleProcess(CreateWriteStartInfo()) {
+                OutputWriter = bytes => {
+                    if (bytes.IsEndOfStream()) {
                         reachedEOF = bytes.IsEndOfStream();
-                    }
-                    else
-                    {
+                    } else {
                         numberOfBytes += bytes.Length;
                         bufferBlocks.Add(Encoding.UTF8.GetString(bytes.ToArray()));
                     }
@@ -41,7 +36,7 @@ namespace Kenet.SimpleProcess.Test
         }
 
         [Fact]
-        public async Task Process_written_lines_are_correct()
+        public async Task Process_written_lines_are_correctAsync()
         {
             var bufferLines = new List<string>();
 
@@ -52,8 +47,7 @@ namespace Kenet.SimpleProcess.Test
 
             sleep.CancelAfter(_cancelAfter);
 
-            await foreach (var line in asyncLines)
-            {
+            await foreach (var line in asyncLines) {
                 bufferLines.Add(line);
             }
 

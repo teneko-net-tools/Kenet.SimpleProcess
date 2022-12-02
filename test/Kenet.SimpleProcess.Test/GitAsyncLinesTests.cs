@@ -5,14 +5,13 @@ namespace Kenet.SimpleProcess.Test
     public class GitAsyncLinesTests
     {
         private static SimpleProcessStartInfo CreateGitLogStartInfo(int numberOfCommits) =>
-            new("git")
-            {
+            new("git") {
                 Arguments = $"log --oneline -{numberOfCommits}",
                 WorkingDirectory = AppContext.BaseDirectory
             };
 
         [Fact]
-        public async Task Execution_should_read_lines()
+        public async Task Execution_should_read_linesAsync()
         {
             const byte lineFeed = 10; // \n
             var expectedNumberOfCommits = 5;
@@ -20,11 +19,9 @@ namespace Kenet.SimpleProcess.Test
 
             using var execution = new ProcessExecutorBuilder(CreateGitLogStartInfo(expectedNumberOfCommits))
                 .Build()
-                .WriteToAsyncLines(x => x.AddOutputWriter, out var lines)
-                .AddOutputWriter(bytes =>
-                {
-                    if (bytes.Length != 0)
-                    {
+                .WriteToAsyncLines(x => x.AddOutputWriter, out var asyncLines)
+                .AddOutputWriter(bytes => {
+                    if (bytes.Length != 0) {
                         lastByte = bytes[^1];
                     }
                 })
@@ -32,8 +29,7 @@ namespace Kenet.SimpleProcess.Test
 
             var commits = new List<string>();
 
-            await foreach (var line in lines)
-            {
+            await foreach (var line in asyncLines) {
                 commits.Add(line);
             }
 

@@ -7,18 +7,15 @@ using Nito.AsyncEx;
 namespace Kenet.SimpleProcess;
 
 /// <summary>
-/// A repeatable process executor.
+/// A non-repeatable process executor.
 /// </summary>
 public sealed class ProcessExecutor :
     IRunnable<IProcessExecution>,
-    IRunnable<ICompletableProcessExecution>,
     IRunnable<IAsyncProcessExecution>,
-    IRunnable<IAsyncCompletableProcessExecution>,
     IProcessExecutorMutator
 {
     private readonly SealableProcessExecutorArtifact _artifact;
     private ProcessExecution? _execution;
-    private TaskCompletionSource<ProcessExecution> _waitForExecution;
 
     /// <summary>
     /// Creates an instance of this type by providing an artifact.
@@ -34,7 +31,6 @@ public sealed class ProcessExecutor :
         }
 
         _artifact = new SealableProcessExecutorArtifact(artifact);
-        _waitForExecution = new TaskCompletionSource<ProcessExecution>();
     }
 
     /// <summary>
@@ -58,56 +54,66 @@ public sealed class ProcessExecutor :
     /// </exception>
     public ProcessExecutor WithExitCode(Func<int, bool> validator)
     {
-        ((IProcessExecutorMutator)_artifact).WithExitCode(validator);
+        _artifact.WithExitCode(validator);
         return this;
     }
 
     void IProcessExecutorMutator.WithExitCode(Func<int, bool> validator) =>
-        ((IProcessExecutorMutator)_artifact).WithExitCode(validator);
+        _artifact.WithExitCode(validator);
 
     /// <inheritdoc cref="IProcessExecutorMutator.WithErrorInterpretation(Encoding?)"/>
     /// <inheritdoc cref="WithExitCode(Func{int, bool})" path="/*[position()>last()-2]"/>
     public ProcessExecutor WithErrorInterpretation(Encoding? encoding)
     {
-        ((IProcessExecutorMutator)_artifact).WithErrorInterpretation(encoding);
+        _artifact.WithErrorInterpretation(encoding);
         return this;
     }
 
     void IProcessExecutorMutator.WithErrorInterpretation(Encoding? encoding) =>
-        ((IProcessExecutorMutator)_artifact).WithErrorInterpretation(encoding);
+        _artifact.WithErrorInterpretation(encoding);
 
     /// <inheritdoc cref="IProcessExecutorMutator.AddErrorWriter(WriteHandler)"/>
     /// <inheritdoc cref="WithExitCode(Func{int, bool})" path="/*[position()>last()-2]"/>
     public ProcessExecutor AddErrorWriter(WriteHandler writer)
     {
-        ((IProcessExecutorMutator)_artifact).AddErrorWriter(writer);
+        _artifact.AddErrorWriter(writer);
         return this;
     }
 
     void IProcessExecutorMutator.AddErrorWriter(WriteHandler writer) =>
-        ((IProcessExecutorMutator)_artifact).AddErrorWriter(writer);
+        _artifact.AddErrorWriter(writer);
 
     /// <inheritdoc cref="IProcessExecutorMutator.AddOutputWriter(WriteHandler)"/>
     /// <inheritdoc cref="WithExitCode(Func{int, bool})" path="/*[position()>last()-2]"/>
     public ProcessExecutor AddOutputWriter(WriteHandler writer)
     {
-        ((IProcessExecutorMutator)_artifact).AddOutputWriter(writer);
+        _artifact.AddOutputWriter(writer);
         return this;
     }
 
     void IProcessExecutorMutator.AddOutputWriter(WriteHandler writer) =>
-        ((IProcessExecutorMutator)_artifact).AddOutputWriter(writer);
+        _artifact.AddOutputWriter(writer);
 
     /// <inheritdoc cref="IProcessExecutorMutator.AddCancellation(IEnumerable{CancellationToken})"/>
     /// <inheritdoc cref="WithExitCode(Func{int, bool})" path="/*[position()>last()-2]"/>
     public ProcessExecutor AddCancellation(IEnumerable<CancellationToken> cancellationTokens)
     {
-        ((IProcessExecutorMutator)_artifact).AddCancellation(cancellationTokens);
+        _artifact.AddCancellation(cancellationTokens);
         return this;
     }
 
     void IProcessExecutorMutator.AddCancellation(IEnumerable<CancellationToken> cancellationTokens) =>
-        ((IProcessExecutorMutator)_artifact).AddCancellation(cancellationTokens);
+        _artifact.AddCancellation(cancellationTokens);
+
+    /// <summary>
+    /// Places a callback in case you call <see cref="Run"/> directly or implictly.
+    /// </summary>
+    /// <inheritdoc cref="WithExitCode(Func{int, bool})" path="/*[position()>last()-2]"/>
+    public ProcessExecutor OnRun(Action<ProcessExecution> callback)
+    {
+        _artifact.OnRun(callback);
+        return this;
+    }
 
     /// <summary>
     /// Writes internally to a stream that gets asynchronously redirected to <paramref name="asyncLines"/>.
@@ -115,6 +121,7 @@ public sealed class ProcessExecutor :
     /// <param name="readFrom"></param>
     /// <param name="asyncLines">
     /// Represents a pipeline that asynchronously waits for incoming bytes, decodes them on-the-fly and returns lines as soon as they are appearing.
+    /// Can throw <see cref="InvalidOperationException"/>.
     /// </param>
     /// <param name="encoding">The decoder used for incoming bytes.</param>
     /// <param name="boundary">
@@ -123,8 +130,8 @@ public sealed class ProcessExecutor :
     /// <inheritdoc cref="WithExitCode(Func{int, bool})" path="/*[position()>last()-2]"/>
     public ProcessExecutor WriteToAsyncLines(Func<ProcessExecutor, Func<WriteHandler, object>> readFrom, out IAsyncEnumerable<string> asyncLines, Encoding encoding, ProcessBoundary boundary)
     {
-        CancellationTokenSource cancellationTokenSource = null!; // CreateAsyncEnumerable() is 100% called
-        var isCancellationTokenSourceDisposed = false;
+        var readCancellationTokenSource = new CancellationTokenSource();
+        var readCancellationToken = readCancellationTokenSource.Token;
         var lineStream = new AsyncLineStream();
 
         _ = readFrom(this)(bytes => {
@@ -133,7 +140,7 @@ public sealed class ProcessExecutor :
             }
 
             IMemoryOwner<byte>? memoryOwner = null;
-            void DisposeMemory() => memoryOwner?.Dispose();
+            void DisposeUnmanagedMemory() => memoryOwner?.Dispose();
 
             try {
                 if (bytes.IsEndOfStream()) {
@@ -145,25 +152,23 @@ public sealed class ProcessExecutor :
                 bytes.CopyTo(memoryOwner.Memory.Span);
                 lineStream.Write(new ConsumedMemoryOwner<byte>(memoryOwner, bytes.Length));
             } catch (Exception error) {
-                DisposeMemory();
+                DisposeUnmanagedMemory();
 
+                // Possible errors from asyncLineStream that are harmless
                 if (error is ObjectDisposedException || error is AlreadyCompletedException) {
                     return;
                 }
 
-                lock (cancellationTokenSource) {
-                    // In case this handler gets called once again after
-                    // the async enumerable may have been already exited
-                    if (!isCancellationTokenSourceDisposed) {
-                        cancellationTokenSource.Cancel();
-                    }
-                }
+                readCancellationTokenSource.Cancel();
             }
         });
 
-        async IAsyncEnumerable<string> CreateAsyncEnumerable([EnumeratorCancellation] CancellationToken cancellationToken = default)
+        var waitForExecution = new TaskCompletionSource<ProcessExecution>();
+        OnRun(waitForExecution.SetResult);
+
+        async IAsyncEnumerable<string> CreateAsyncEnumerable([EnumeratorCancellation] CancellationToken enumeratorCancellationToken = default)
         {
-            cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(readCancellationToken, enumeratorCancellationToken);
             var linkedCancellationToken = cancellationTokenSource.Token;
 
             Disposables.Delegated? cancellationOnBoundaryExceeding = null;
@@ -176,24 +181,24 @@ public sealed class ProcessExecutor :
                     boundaryAssociation = boundary.Associate(cancellationOnBoundaryExceeding);
                 }
 
-                var execution = await _waitForExecution.Task.WaitAsync(linkedCancellationToken).ConfigureAwait(false);
+                _ = linkedCancellationToken.Register(() => waitForExecution.SetException(new OperationCanceledException(linkedCancellationToken)));
+                var execution = await waitForExecution.Task.ConfigureAwait(false);
                 using var cancelOnProcessCancellation = execution.Cancelled.Register(cancellationTokenSource.Cancel);
 
-                // REMINDER: OutputAvailableAsync() won't throw OperationCanceledException, it will just cancel
-                while (await lineStream.WrittenLines.OutputAvailableAsync(linkedCancellationToken).ConfigureAwait(false)) {
-                    // When taking, no no blocking wait will be involved due to previous OutputAvailableAsync()
+                // REMINDER: OutputAvailableAsync() won't throw OperationCanceledException, it will just return false without error,
+                // so we use WaitAsync() to provoce an exception. We this approach we also ensure the release of OutputAvailableAsync
+                // originated from the cancellation token.
+                while (await lineStream.WrittenLines.OutputAvailableAsync().WaitAsync(linkedCancellationToken).ConfigureAwait(false)) {
+                    // When taking, no blocking wait will be involved due to previous OutputAvailableAsync()
                     using var bytesOwner = lineStream.WrittenLines.Take();
                     yield return encoding.GetString(bytesOwner.ConsumedMemory.Span, bytesOwner.ConsumedCount);
                 }
             } finally {
+                readCancellationTokenSource.Dispose();
                 lineStream.Dispose();
                 cancellationOnBoundaryExceeding?.Dispose();
                 boundaryAssociation.Dispose();
-
-                lock (cancellationTokenSource) {
-                    cancellationTokenSource.Dispose();
-                    isCancellationTokenSourceDisposed = true;
-                }
+                cancellationTokenSource.Dispose();
             }
         }
 
@@ -223,9 +228,13 @@ public sealed class ProcessExecutor :
                 return currentExecution;
             }
 
-            _artifact.Seal(out var artifact);
+            var (artifact, onRunCallbacks) = _artifact.Seal();
             var newExecution = ProcessExecution.Create(artifact);
-            _waitForExecution.SetResult(newExecution);
+
+            foreach (var onRunCallback in onRunCallbacks) {
+                onRunCallback(newExecution);
+            }
+
             newExecution.Run();
             return newExecution;
         }
@@ -234,12 +243,6 @@ public sealed class ProcessExecutor :
     IProcessExecution IRunnable<IProcessExecution>.Run() =>
         Run();
 
-    ICompletableProcessExecution IRunnable<ICompletableProcessExecution>.Run() =>
-        Run();
-
     IAsyncProcessExecution IRunnable<IAsyncProcessExecution>.Run() =>
-        Run();
-
-    IAsyncCompletableProcessExecution IRunnable<IAsyncCompletableProcessExecution>.Run() =>
         Run();
 }

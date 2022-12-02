@@ -9,9 +9,7 @@ public sealed class ProcessExecutorBuilder :
     IProcessExecutorBuilder,
     IProcessExecutorMutator,
     IRunnable<IProcessExecution>,
-    IRunnable<ICompletableProcessExecution>,
-    IRunnable<IAsyncProcessExecution>,
-    IRunnable<IAsyncCompletableProcessExecution>
+    IRunnable<IAsyncProcessExecution>
 {
     /// <summary>
     /// Creates a builder with error interpretation in case of a bad exit code.
@@ -136,12 +134,6 @@ public sealed class ProcessExecutorBuilder :
     IProcessExecution IRunnable<IProcessExecution>.Run() =>
         Run();
 
-    ICompletableProcessExecution IRunnable<ICompletableProcessExecution>.Run() =>
-        Run();
-
     IAsyncProcessExecution IRunnable<IAsyncProcessExecution>.Run() =>
-        Run();
-
-    IAsyncCompletableProcessExecution IRunnable<IAsyncCompletableProcessExecution>.Run() =>
         Run();
 }

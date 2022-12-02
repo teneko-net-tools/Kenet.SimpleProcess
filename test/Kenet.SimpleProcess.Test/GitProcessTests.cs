@@ -31,7 +31,7 @@ public class GitProcessTests
 
     [Theory]
     [MemberData(nameof(Git_rev_parse_output_should_be_captured_test_cases))]
-    public async Task Git_rev_parse_output_should_be_captured_asynchronously(ProcessExecutorBuilder builder)
+    public async Task Git_rev_parse_output_should_be_captured_asynchronouslyAsync(ProcessExecutorBuilder builder)
     {
         using var boundary = new ProcessBoundary();
 

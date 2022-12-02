@@ -1,7 +1,7 @@
-﻿using FluentAssertions;
-using Kenet.SimpleProcess.Pipelines;
-using System.Buffers;
+﻿using System.Buffers;
 using System.Text;
+using FluentAssertions;
+using Kenet.SimpleProcess.Pipelines;
 
 namespace Kenet.SimpleProcess.Test.Pipelines
 {
@@ -36,7 +36,7 @@ namespace Kenet.SimpleProcess.Test.Pipelines
         private class StringMemoryOwner : IMemoryOwner<byte>
         {
             public static StringMemoryOwner Of(string text) =>
-                new StringMemoryOwner(text);
+                new(text);
 
             public Memory<byte> Memory { get; }
 

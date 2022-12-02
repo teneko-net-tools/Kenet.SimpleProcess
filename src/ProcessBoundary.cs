@@ -16,7 +16,7 @@ public readonly struct ProcessBoundary : IDisposable
     public static readonly ProcessBoundary Disposed = new ProcessBoundary(initialCapacity: 0);
 
     /// <summary>
-    /// Represents a special boundary that is in a faulty state. Any attempt to add an association or to dispsoe the instance results into a <see cref="InvalidOperationException"/>.
+    /// Represents a special boundary that is in a faulty state. Any attempt to add an association or to dispsoe the instance results into an <see cref="InvalidOperationException"/>.
     /// </summary>
     internal static readonly ProcessBoundary Faulted = new ProcessBoundary(initialCapacity: 1);
 

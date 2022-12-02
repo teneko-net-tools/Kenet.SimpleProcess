@@ -5,7 +5,18 @@
 /// </summary>
 public interface IProcessInfo
 {
+    /// <summary>
+    /// The process id.
+    /// </summary>
+    /// <remarks>
+    /// Available after the process has ran.
+    /// </remarks>
     int? Id { get; }
+
+    /// <summary>
+    /// Triggered when the process started.
+    /// </summary>
+    CancellationToken Started { get; }
 
     /// <summary>
     /// Indicates that the process has been started.
@@ -13,10 +24,16 @@ public interface IProcessInfo
     bool IsRunning { get; }
 
     /// <summary>
-    /// The cancellation token, that gets cancelled when exited. You can use it to
-    /// safely register callbacks by using <see cref="CancellationToken.Register(Action)"/>
-    /// whose callback gets called, if the process have been already exited.
+    /// Triggered when the process exited. Use it to safely register callbacks by using
+    /// <see cref="CancellationToken.Register(Action)"/> whose callback gets called when the
+    /// process exited.
     /// </summary>
+    /// <remarks>
+    /// There are cases, where the this cancellation token is not always cancelled, for example
+    /// when the process has not been ran at all. For getting a definitely end of process, use
+    /// <see cref="Cancelled"/>, but keep in mind, that it get called when disposed at the
+    /// latest.
+    /// </remarks>
     CancellationToken Exited { get; }
 
     /// <summary>
@@ -25,8 +42,7 @@ public interface IProcessInfo
     bool IsExited { get; }
 
     /// <summary>
-    /// The cancellation token, that gets cancelled when the process exited or the
-    /// process have been requested to fall into the cancelling state.
+    /// Triggered when the process cancelled or disposed.
     /// </summary>
     /// <remarks>
     /// Even if the process has fallen into the cancelling state, it won't be taken any

@@ -39,22 +39,22 @@ internal class ProcessExecutorArtifact : IProcessExecutorArtifact, IProcessExecu
     }
 
     /// <inheritdoc cref="IProcessExecutorMutator.WithExitCode(Func{int, bool})"/>
-    void IProcessExecutorMutator.WithExitCode(Func<int, bool> validator) =>
+    public void WithExitCode(Func<int, bool> validator) =>
         ValidateExitCode = validator;
 
     /// <inheritdoc cref="IProcessExecutorMutator.WithErrorInterpretation(Encoding?)"/>
-    void IProcessExecutorMutator.WithErrorInterpretation(Encoding? encoding = null) =>
+    public void WithErrorInterpretation(Encoding? encoding = null) =>
         ExitErrorEncoding ??= encoding ?? Encoding.UTF8;
 
     /// <inheritdoc cref="IProcessExecutorMutator.AddErrorWriter(WriteHandler)"/>
-    void IProcessExecutorMutator.AddErrorWriter(WriteHandler writer) =>
+    public void AddErrorWriter(WriteHandler writer) =>
         ErrorWriters.Add(writer);
 
     /// <inheritdoc cref="IProcessExecutorMutator.AddOutputWriter(WriteHandler)"/>
-    void IProcessExecutorMutator.AddOutputWriter(WriteHandler writer) =>
+    public void AddOutputWriter(WriteHandler writer) =>
         OutputWriters.Add(writer);
 
     /// <inheritdoc cref="IProcessExecutorMutator.AddCancellation(IEnumerable{CancellationToken})"/>
-    void IProcessExecutorMutator.AddCancellation(IEnumerable<CancellationToken> cancellationTokens) =>
+    public void AddCancellation(IEnumerable<CancellationToken> cancellationTokens) =>
         CancellationTokens.AddRange(cancellationTokens);
 }

@@ -5,7 +5,8 @@ namespace Kenet.SimpleProcess;
 internal class SealableProcessExecutorArtifact : IProcessExecutorMutator
 {
     private readonly ProcessExecutorArtifact _artifact;
-    volatile bool _isSealed;
+    private readonly List<Action<ProcessExecution>> _onRunCallbacks = new List<Action<ProcessExecution>>();
+    private bool _isSealed;
 
     public SealableProcessExecutorArtifact(ProcessExecutorArtifact artifact) =>
         _artifact = artifact ?? throw new ArgumentNullException(nameof(artifact));
@@ -17,36 +18,37 @@ internal class SealableProcessExecutorArtifact : IProcessExecutorMutator
         }
     }
 
-    private IProcessExecutorMutator Mutate(Action<IProcessExecutorMutator> changeArtifact)
+    private void Mutate(Action changeArtifact)
     {
         lock (this) {
             ThrowIfSealed();
-            changeArtifact(_artifact);
+            changeArtifact();
         }
-
-        return this;
     }
 
-    public void Seal(out ProcessExecutorArtifact artifact)
+    internal (ProcessExecutorArtifact Artifact, IEnumerable<Action<ProcessExecution>> OnRunCallbacks) Seal()
     {
         lock (this) {
             _isSealed = true;
-            artifact = _artifact;
+            return (_artifact, _onRunCallbacks);
         }
     }
 
     public void WithExitCode(Func<int, bool> validator) =>
-        Mutate(artifact => artifact.WithExitCode(validator));
+        Mutate(() => _artifact.WithExitCode(validator));
 
     public void WithErrorInterpretation(Encoding? encoding) =>
-        Mutate(artifact => artifact.WithErrorInterpretation(encoding));
+        Mutate(() => _artifact.WithErrorInterpretation(encoding));
 
     public void AddErrorWriter(WriteHandler writer) =>
-        Mutate(artifact => artifact.AddErrorWriter(writer));
+        Mutate(() => _artifact.AddErrorWriter(writer));
 
     public void AddOutputWriter(WriteHandler writer) =>
-        Mutate(artifact => artifact.AddOutputWriter(writer));
+        Mutate(() => _artifact.AddOutputWriter(writer));
 
     public void AddCancellation(IEnumerable<CancellationToken> cancellationTokens) =>
-        Mutate(artifact => artifact.AddCancellation(cancellationTokens));
+        Mutate(() => _artifact.AddCancellation(cancellationTokens));
+
+    public void OnRun(Action<ProcessExecution> callback) =>
+        Mutate(() => _onRunCallbacks.Add(callback));
 }

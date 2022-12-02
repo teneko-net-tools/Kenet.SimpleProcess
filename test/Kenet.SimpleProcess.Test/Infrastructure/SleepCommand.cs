@@ -9,13 +9,11 @@ namespace Kenet.SimpleProcess.Test.Infrastructure
 
         private static string GetOSDependentExecutableExtension()
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
                 return ".exe";
             }
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) {
                 return "";
             }
 
@@ -27,8 +25,7 @@ namespace Kenet.SimpleProcess.Test.Infrastructure
 
         internal static void KillRemainingSleepProcesses()
         {
-            foreach (Process process in Process.GetProcessesByName(SleepProcessName))
-            {
+            foreach (var process in Process.GetProcessesByName(SleepProcessName)) {
                 process.Kill();
                 process.Dispose();
                 Thread.Sleep(100);

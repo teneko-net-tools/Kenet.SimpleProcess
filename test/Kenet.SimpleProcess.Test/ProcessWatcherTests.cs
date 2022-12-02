@@ -8,7 +8,7 @@ namespace Kenet.SimpleProcess.Test
     public class ProcessWatcherTests
     {
         [Fact]
-        public async void Watching_already_exited_process_throws()
+        public void Watching_already_exited_process_throws()
         {
             using var process = new SimpleProcess(CreateSleepStartInfo());
             process.Run();
@@ -17,20 +17,17 @@ namespace Kenet.SimpleProcess.Test
 
             using var watcher = new ProcessWatcher(process._process);
 
-            try
-            {
+            try {
                 watcher.Watch();
                 watcher.IsExited.Should().BeTrue();
-            }
-            catch (ArgumentException)
-            {
+            } catch (ArgumentException) {
                 // Only valid in .NET 4.8
                 watcher.IsExited.Should().BeFalse();
             }
         }
 
         [Fact]
-        public async void Watching_already_exited_process_passes()
+        public void Watching_already_exited_process_passes()
         {
             using var process = new SimpleProcess(CreateSleepStartInfo());
             process.Run();

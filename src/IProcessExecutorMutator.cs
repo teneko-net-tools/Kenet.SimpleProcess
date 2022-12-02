@@ -8,8 +8,8 @@ namespace Kenet.SimpleProcess;
 public interface IProcessExecutorMutator
 {
     /// <summary>
-    /// If used, the process exit code will be checked against <paramref name="validator" /> and throw
-    /// <see cref="BadExitCodeException" /> on mismatch.
+    /// If used, the process exit code will be checked against <paramref name="validator" /> and an exception
+    /// of type <see cref="BadExitCodeException" /> will be throwed on mismatch.
     /// </summary>
     /// <param name="validator"></param>
     void WithExitCode(Func<int, bool> validator);
