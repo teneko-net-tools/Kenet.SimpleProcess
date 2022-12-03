@@ -141,7 +141,7 @@ public sealed class ProcessExecutor :
             }
 
             IMemoryOwner<byte>? memoryOwner = null;
-            void DisposeUnmanagedMemory() => memoryOwner?.Dispose();
+            void DisposeOrphanedMemory() => memoryOwner?.Dispose();
 
             try {
                 if (bytes.IsEndOfStream()) {
@@ -153,7 +153,7 @@ public sealed class ProcessExecutor :
                 bytes.CopyTo(memoryOwner.Memory.Span);
                 lineStream.Write(new ConsumedMemoryOwner<byte>(memoryOwner, bytes.Length));
             } catch (Exception error) {
-                DisposeUnmanagedMemory();
+                DisposeOrphanedMemory();
 
                 // Possible errors from asyncLineStream that are harmless
                 if (error is ObjectDisposedException || error is AlreadyCompletedException) {
@@ -184,13 +184,13 @@ public sealed class ProcessExecutor :
             try {
                 if (!boundary.IsFaulted) {
                     cancellationOnBoundaryExceeding = new Disposables.Delegated(cancellationTokenSource.Cancel);
-                    _ = linkedCancellationToken.Register(cancellationOnBoundaryExceeding.Revoke);
+                    _ = linkedCancellationToken.Register(cancellationOnBoundaryExceeding.Revoke, useSynchronizationContext: false);
                     boundaryAssociation = boundary.Associate(cancellationOnBoundaryExceeding);
                 }
 
-                _ = linkedCancellationToken.Register(() => waitForExecution.SetException(new OperationCanceledException(linkedCancellationToken)));
+                _ = linkedCancellationToken.Register(() => waitForExecution.SetException(new OperationCanceledException(linkedCancellationToken)), useSynchronizationContext: false);
                 var execution = await waitForExecution.Task.ConfigureAwait(false);
-                using var cancelOnProcessCancellation = execution.Cancelled.Register(cancellationTokenSource.Cancel);
+                using var cancelOnProcessCancellation = execution.Cancelled.Register(cancellationTokenSource.Cancel, useSynchronizationContext: false);
 
                 // REMINDER: OutputAvailableAsync() won't throw OperationCanceledException, it will just return false without error,
                 // so we use WaitAsync() to provoce an exception. We this approach we also ensure the release of OutputAvailableAsync

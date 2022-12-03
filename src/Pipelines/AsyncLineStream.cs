@@ -20,7 +20,7 @@ namespace Kenet.SimpleProcess.Pipelines
         private SequenceSegment _lastSegment;
         private SequenceSegment _lastAnchorSegment;
         private ReadOnlySequence<byte> _sequence;
-        private TicketLock _writeLock;
+        private QueueLock _writeLock;
         private List<Task>? _writeTasks;
         private int _isDisposed;
         private bool _isLastLinePending;
@@ -32,7 +32,7 @@ namespace Kenet.SimpleProcess.Pipelines
             _lastSegment = _lastAnchorSegment;
             _firstAnchorSegment.ReplaceNextSegment(_lastAnchorSegment);
             _sequence = new ReadOnlySequence<byte>(_firstAnchorSegment, 0, _lastAnchorSegment, 0);
-            _writeLock = new TicketLock();
+            _writeLock = new QueueLock();
             _writeTasks = new List<Task>();
             WrittenLines = new AsyncCollection<ConsumedMemoryOwner<byte>>();
         }
@@ -160,7 +160,7 @@ namespace Kenet.SimpleProcess.Pipelines
                 EnsureNotDisposed();
                 EnsureNotCompleted();
 
-                var ticket = _writeLock.DrawTicket();
+                var ticket = _writeLock.DrawPosition();
 
                 // TODO: Consider background thread
                 _writeTasks.Add(Task.Run(() => {

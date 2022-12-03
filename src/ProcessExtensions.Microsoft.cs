@@ -7,6 +7,8 @@ using System.Runtime.InteropServices;
 
 namespace Kenet.SimpleProcess;
 
+// TODO: Consider UNIX alternative: 
+// https://github.com/dotnet/runtime/issues/24617
 internal partial class ProcessExtensions
 {
     private static readonly bool _isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);

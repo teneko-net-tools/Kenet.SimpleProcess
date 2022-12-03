@@ -183,6 +183,25 @@ public sealed class SimpleProcess :
         process = currentProcess!;
     }
 
+    private void HandleProcessExit()
+    {
+        if (IsExited) {
+            return;
+        }
+
+        IsExited = true;
+
+        if (IsDisposed) {
+            return;
+        }
+
+        try {
+            _processExitedTokenSource.Cancel();
+        } catch (ObjectDisposedException) {
+            ; // Dispose() was faster
+        }
+    }
+
     [MemberNotNull(nameof(_readOutputTask), nameof(_readErrorTask))]
     private void StartProcess(Process process)
     {
@@ -198,20 +217,8 @@ public sealed class SimpleProcess :
 
             process.EnableRaisingEvents = true;
 
-            void OnProcessExited(object? sender, EventArgs e)
-            {
-                IsExited = true;
-
-                if (IsDisposed) {
-                    return;
-                }
-
-                try {
-                    _processExitedTokenSource.Cancel();
-                } catch (ObjectDisposedException) {
-                    ; // Dispose() was faster
-                }
-            }
+            void OnProcessExited(object? sender, EventArgs e) =>
+                HandleProcessExit();
 
             process.Exited += OnProcessExited;
 
@@ -407,9 +414,9 @@ public sealed class SimpleProcess :
                 whenAnyTask.GetAwaiter().GetResult();
             }
 
-            /* The process exited */
-            IsExited = true;
+            /* The process exited successfully */
             _exitCode ??= process.ExitCode;
+            HandleProcessExit();
         } catch (Exception error) {
             if (completionOptions != ProcessCompletionOptions.None
                 && error is OperationCanceledException
