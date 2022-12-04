@@ -1,43 +1,34 @@
 ﻿using System.Buffers;
-using CommunityToolkit.HighPerformance.Buffers;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Text;
 
 namespace Kenet.SimpleProcess.Pipelines;
 
-internal readonly struct ConsumedMemoryOwner<T> : IMemoryOwner<T>
+internal static class ConsumedMemoryOwner
 {
-    public static readonly ConsumedMemoryOwner<T> Empty = new ConsumedMemoryOwner<T>(MemoryOwner<T>.Empty, 0);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ConsumedMemoryOwner<T> Empty<T>() =>
+        ConsumedMemoryOwner<T>.Empty;
 
-    public Memory<T> Memory =>
-        _memoryOwner.Memory;
-
-    public Memory<T> ConsumedMemory =>
-        _memoryOwner.Memory.Slice(0, ConsumedCount);
-
-    /// <summary>
-    /// How much has been consumed.
-    /// </summary>
-    public int ConsumedCount { get; }
-
-    private readonly IMemoryOwner<T> _memoryOwner;
-
-    public ConsumedMemoryOwner(IMemoryOwner<T> memoryOwner, int consumedCount)
+    public static ConsumedMemoryOwner<byte> Of(string text, Encoding encoding)
     {
-        _memoryOwner = memoryOwner ?? throw new ArgumentNullException(nameof(memoryOwner));
+        var charsCount = text.Length;
+        var maxBytesCount = encoding.GetMaxByteCount(text.Length);
+        var bytesOwner = MemoryPool<byte>.Shared.Rent(encoding.GetMaxByteCount(charsCount));
+        int bytesCount;
 
-        if (consumedCount < 0) {
-            throw new ArgumentOutOfRangeException("Consumed amount cannot be lesser than zero");
-        } else if (consumedCount > memoryOwner.Memory.Length) {
-            throw new ArgumentOutOfRangeException("Consumed amount cannot be greater than the memory is long");
+        unsafe {
+            fixed (char* chars = text) {
+                fixed (byte* bytes = &MemoryMarshal.GetReference(bytesOwner.Memory.Span)) {
+                    bytesCount = encoding.GetBytes(chars, charsCount, bytes, maxBytesCount);
+                }
+            }
         }
 
-        ConsumedCount = consumedCount;
-    }
-    public ConsumedMemoryOwner(IMemoryOwner<T> memoryOwner)
-        : this(memoryOwner, memoryOwner.Memory.Length)
-    {
+        return new(bytesOwner, bytesCount);
     }
 
-    public void Dispose() =>
-        _memoryOwner.Dispose();
+    public static ConsumedMemoryOwner<byte> Of(string text) =>
+        Of(text, Encoding.UTF8);
 }
-

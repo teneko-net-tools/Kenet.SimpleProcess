@@ -12,6 +12,7 @@
 	<ItemGroup>
 		<PackageReference Include="FluentAssertions" Version="6.8.0" />
 		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.3.2" />
+		<PackageReference Include="System.Linq.Async" Version="6.0.1" />
 		<PackageReference Include="Teronis.DotNet.EditorConfig.Test" Version="0.3.0-alpha.4">
 		  <PrivateAssets>all</PrivateAssets>
 		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

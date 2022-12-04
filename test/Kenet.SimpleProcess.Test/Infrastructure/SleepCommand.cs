@@ -21,7 +21,7 @@ namespace Kenet.SimpleProcess.Test.Infrastructure
         }
 
         internal static SimpleProcessStartInfo CreateSleepStartInfo() =>
-            new($"{SleepProcessName}{GetOSDependentExecutableExtension()}");
+            new(SleepProcessName + GetOSDependentExecutableExtension());
 
         internal static void KillRemainingSleepProcesses()
         {

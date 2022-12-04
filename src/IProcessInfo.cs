@@ -9,7 +9,7 @@ public interface IProcessInfo
     /// The process id.
     /// </summary>
     /// <remarks>
-    /// Available after the process has ran.
+    /// Available after the process has started.
     /// </remarks>
     int? Id { get; }
 
@@ -21,7 +21,24 @@ public interface IProcessInfo
     /// <summary>
     /// Indicates that the process has been started.
     /// </summary>
-    bool IsRunning { get; }
+    bool HasStarted { get; }
+
+    /// <summary>
+    /// Indicates whether the process has been cancelled or not. If <see langword="true"/>, then <see cref="IsExited"/> is <see langword="false"/>.
+    /// </summary>
+    bool IsCancelled { get; }
+
+    /// <summary>
+    /// Triggered when the process cancelled. Its get triggered too when disposing, if the process has not exited so far.
+    /// </summary>
+    /// <remarks>
+    /// Even if the process has fallen into the cancelling state, it won't be taken any
+    /// proactive action to kill the process. The least what can happen is, that
+    /// on-going process completion tasks are gonna canceled, because underlying
+    /// output or error stream reader are automatically canceled when the process
+    /// has fallen into the cancelling state.
+    /// </remarks>
+    CancellationToken Cancelled { get; }
 
     /// <summary>
     /// Triggered when the process exited. Use it to safely register callbacks by using
@@ -37,24 +54,12 @@ public interface IProcessInfo
     CancellationToken Exited { get; }
 
     /// <summary>
-    /// Indicates whether the process has been exited or not.
+    /// Indicates whether the process has been exited or not. If <see langword="true"/>, then <see cref="IsCancelled"/> is <see langword="false"/>.
     /// </summary>
     bool IsExited { get; }
 
     /// <summary>
-    /// Triggered when the process cancelled or disposed.
-    /// </summary>
-    /// <remarks>
-    /// Even if the process has fallen into the cancelling state, it won't be taken any
-    /// proactive action to kill the process. The least what can happen is, that
-    /// on-going process completion tasks are gonna canceled, because underlying
-    /// output or error stream reader are automatically canceled when the process
-    /// has fallen into the cancelling state.
-    /// </remarks>
-    CancellationToken Cancelled { get; }
-
-    /// <summary>
-    /// Indicates whether the process has been disposed or not.
+    /// Indicates that the process has been disposed.
     /// </summary>
     bool IsDisposed { get; }
 }

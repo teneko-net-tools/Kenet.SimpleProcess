@@ -124,13 +124,13 @@ public sealed class ProcessExecutor :
     /// Can throw <see cref="InvalidOperationException"/>.
     /// </param>
     /// <param name="encoding">The decoder used for incoming bytes.</param>
-    /// <param name="boundary">
-    /// If the process boundary gets disposed, then the current or next cancellable operation will be cancelled.
+    /// <param name="cancellationToken">
+    /// If the token gets cancellation requested, then the current or next cancellable operation will be cancelled.
     /// </param>
     /// <inheritdoc cref="WithExitCode(Func{int, bool})" path="/*[position()>last()-2]"/>
-    public ProcessExecutor WriteToAsyncLines(Func<ProcessExecutor, Func<WriteHandler, object>> readFrom, out IAsyncEnumerable<string> asyncLines, Encoding encoding, ProcessBoundary boundary)
+    public ProcessExecutor WriteToAsyncLines(Func<ProcessExecutor, Func<WriteHandler, object>> readFrom, out IAsyncEnumerable<string> asyncLines, Encoding encoding, CancellationToken cancellationToken)
     {
-        var readCancellationTokenSource = new CancellationTokenSource();
+        var readCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var isReadCancellationTokenSourceDisposed = false;
         var readCancellationToken = readCancellationTokenSource.Token;
         var lineStream = new AsyncLineStream();
@@ -178,16 +178,7 @@ public sealed class ProcessExecutor :
             var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(readCancellationToken, enumeratorCancellationToken);
             var linkedCancellationToken = cancellationTokenSource.Token;
 
-            Disposables.Delegated? cancellationOnBoundaryExceeding = null;
-            ProcessBoundaryRegistration boundaryAssociation = default;
-
             try {
-                if (!boundary.IsFaulted) {
-                    cancellationOnBoundaryExceeding = new Disposables.Delegated(cancellationTokenSource.Cancel);
-                    _ = linkedCancellationToken.Register(cancellationOnBoundaryExceeding.Revoke, useSynchronizationContext: false);
-                    boundaryAssociation = boundary.Associate(cancellationOnBoundaryExceeding);
-                }
-
                 _ = linkedCancellationToken.Register(() => waitForExecution.SetException(new OperationCanceledException(linkedCancellationToken)), useSynchronizationContext: false);
                 var execution = await waitForExecution.Task.ConfigureAwait(false);
                 using var cancelOnProcessCancellation = execution.Cancelled.Register(cancellationTokenSource.Cancel, useSynchronizationContext: false);
@@ -209,8 +200,6 @@ public sealed class ProcessExecutor :
                 }
 
                 lineStream.Dispose();
-                cancellationOnBoundaryExceeding?.Dispose();
-                boundaryAssociation.Dispose();
                 cancellationTokenSource.Dispose();
             }
         }
@@ -219,17 +208,17 @@ public sealed class ProcessExecutor :
         return this;
     }
 
-    /// <inheritdoc cref="WriteToAsyncLines(Func{ProcessExecutor, Func{WriteHandler, object}}, out IAsyncEnumerable{string}, Encoding, ProcessBoundary)"/>
+    /// <inheritdoc cref="WriteToAsyncLines(Func{ProcessExecutor, Func{WriteHandler, object}}, out IAsyncEnumerable{string}, Encoding, CancellationToken)"/>
     public ProcessExecutor WriteToAsyncLines(Func<ProcessExecutor, Func<WriteHandler, object>> readFrom, out IAsyncEnumerable<string> asyncLines, Encoding encoding) =>
-        WriteToAsyncLines(readFrom, out asyncLines, encoding, ProcessBoundary.Faulted);
+        WriteToAsyncLines(readFrom, out asyncLines, encoding, CancellationToken.None);
 
-    /// <inheritdoc cref="WriteToAsyncLines(Func{ProcessExecutor, Func{WriteHandler, object}}, out IAsyncEnumerable{string}, Encoding, ProcessBoundary)"/>
+    /// <inheritdoc cref="WriteToAsyncLines(Func{ProcessExecutor, Func{WriteHandler, object}}, out IAsyncEnumerable{string}, Encoding, CancellationToken)"/>
     public ProcessExecutor WriteToAsyncLines(Func<ProcessExecutor, Func<WriteHandler, object>> readFrom, out IAsyncEnumerable<string> asyncLines) =>
-        WriteToAsyncLines(readFrom, out asyncLines, Encoding.UTF8, ProcessBoundary.Faulted);
+        WriteToAsyncLines(readFrom, out asyncLines, Encoding.UTF8, CancellationToken.None);
 
-    /// <inheritdoc cref="WriteToAsyncLines(Func{ProcessExecutor, Func{WriteHandler, object}}, out IAsyncEnumerable{string}, Encoding, ProcessBoundary)"/>
-    public ProcessExecutor WriteToAsyncLines(Func<ProcessExecutor, Func<WriteHandler, object>> readFrom, out IAsyncEnumerable<string> asyncLines, ProcessBoundary boundary) =>
-        WriteToAsyncLines(readFrom, out asyncLines, Encoding.UTF8, boundary);
+    /// <inheritdoc cref="WriteToAsyncLines(Func{ProcessExecutor, Func{WriteHandler, object}}, out IAsyncEnumerable{string}, Encoding, CancellationToken)"/>
+    public ProcessExecutor WriteToAsyncLines(Func<ProcessExecutor, Func<WriteHandler, object>> readFrom, out IAsyncEnumerable<string> asyncLines, CancellationToken cancellationToken) =>
+        WriteToAsyncLines(readFrom, out asyncLines, Encoding.UTF8, cancellationToken);
 
     /// <inheritdoc cref="SimpleProcess.Run()"/>
     public ProcessExecution Run()

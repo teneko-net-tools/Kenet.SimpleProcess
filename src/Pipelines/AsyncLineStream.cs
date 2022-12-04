@@ -7,6 +7,9 @@ namespace Kenet.SimpleProcess.Pipelines
 {
     internal sealed class AsyncLineStream : IDisposable
     {
+        private delegate IEnumerable<ConsumedMemoryOwner<byte>> ReadLinesDelegate();
+        private delegate bool TrySeekNewLineDelegate(out ReadOnlySequence<byte> line, out byte newLineLength);
+
         private static readonly byte _n = (byte)'\n';
         private static readonly byte _r = (byte)'\r';
         private static readonly byte[] _n_or_r = new byte[] { _n, _r };
@@ -23,6 +26,7 @@ namespace Kenet.SimpleProcess.Pipelines
         private QueueLock _writeLock;
         private List<Task>? _writeTasks;
         private int _isDisposed;
+        private bool _isCarriageReturnPending;
         private bool _isLastLinePending;
 
         public AsyncLineStream()
@@ -74,11 +78,48 @@ namespace Kenet.SimpleProcess.Pipelines
             _firstSegment.IncrementOffset(segmentStartIndex);
         }
 
-        // Seek for:
-        // \n (Unix)
-        // \r\n (Window)
-        // \r (MacOS)
+        /// <summary>
+        /// Seeks for \n (Unix), \r\n (Window) or \r (MacOS) safely.
+        /// </summary>
+        /// <param name="line"></param>
+        /// <param name="newLineLength"></param>
         private bool TrySeekNewLine(out ReadOnlySequence<byte> line, out byte newLineLength)
+        {
+            var reader = new SequenceReader<byte>(_sequence);
+
+            if (reader.TryAdvanceToAny(_n_or_r, advancePastDelimiter: false)) {
+                if (reader.TryRead(out var next) && next == _n) {
+                    newLineLength = 1; // \n
+                } else if (!reader.TryRead(out next)) {
+                    // We don't know if \r may be actually \r or \r\n
+                    _isCarriageReturnPending = true;
+                    goto @false;
+                } else {
+                    newLineLength = next == _n
+                        ? (byte)2 // \r\n
+                        : (byte)1; // \r
+                }
+
+                _isCarriageReturnPending = false;
+                line = _sequence.Slice(0, reader.Consumed); // Consumed includes newline
+                return true;
+            }
+
+            @false:
+            line = ReadOnlySequence<byte>.Empty;
+            newLineLength = 0;
+            return false;
+        }
+
+        /// <summary>
+        /// Seeks for \n (Unix), \r\n (Window) or \r (MacOS).
+        /// </summary>
+        /// <remarks>
+        /// Will return line with newline even when the sequence only ends with \r.
+        /// </remarks>
+        /// <param name="line"></param>
+        /// <param name="newLineLength"></param>
+        private bool TrySeekNewLineUnsafe(out ReadOnlySequence<byte> line, out byte newLineLength)
         {
             var reader = new SequenceReader<byte>(_sequence);
 
@@ -117,11 +158,15 @@ namespace Kenet.SimpleProcess.Pipelines
                 AdvanceTo(line, advancePastLine: true);
             }
 
+            // This boolean wants to solve the following problem:
+            // Imagine writing the line: "Example\n", then in case no write follows
+            // anymore, a empty line MUST follow. This is handled in Complete(bool).
+            _isLastLinePending = true;
             memoryOwner = new ConsumedMemoryOwner<byte>(lineMemoryOwner, lineLength);
             return true;
         }
 
-        private IEnumerable<ConsumedMemoryOwner<byte>> ReadLines(ConsumedMemoryOwner<byte> memoryOwner)
+        private void AppendMemory(ConsumedMemoryOwner<byte> memoryOwner)
         {
             var nextSegment = new SequenceSegment(memoryOwner, memoryOwner.ConsumedCount);
 
@@ -140,34 +185,42 @@ namespace Kenet.SimpleProcess.Pipelines
                 _lastSegment = nextSegment;
                 _lastSegment.ReplaceNextSegment(_lastAnchorSegment);
             }
+        }
 
-            while (TrySeekNewLine(out var line, out var newLineLength)) {
+        private IEnumerable<ConsumedMemoryOwner<byte>> ReadLines(TrySeekNewLineDelegate trySeekNewLine)
+        {
+            while (trySeekNewLine(out var line, out var newLineLength)) {
                 if (TryReadLine(out var lineOwner, line, newLineLength, advanceStream: true)) {
-                    _isLastLinePending = true;
                     yield return lineOwner;
                 }
             }
         }
 
+        private IEnumerable<ConsumedMemoryOwner<byte>> ReadLines() =>
+            ReadLines(TrySeekNewLine);
+
         /// <summary>
-        /// 
+        /// Accepts the memory to extract lines from it.
         /// </summary>
         /// <param name="memoryOwner"></param>
+        /// <param name="readLines"></param>
         /// <exception cref="InvalidOperationException"></exception>
-        public void Write(ConsumedMemoryOwner<byte> memoryOwner)
+        private void Write(ConsumedMemoryOwner<byte> memoryOwner, ReadLinesDelegate readLines)
         {
             lock (_writeLock) {
                 EnsureNotDisposed();
                 EnsureNotCompleted();
 
-                var ticket = _writeLock.DrawPosition();
+                var position = _writeLock.DrawPosition();
 
                 // TODO: Consider background thread
                 _writeTasks.Add(Task.Run(() => {
-                    _writeLock.Enter(ticket);
+                    _writeLock.Enter(position);
 
                     try {
-                        foreach (var line in ReadLines(memoryOwner)) {
+                        AppendMemory(memoryOwner);
+
+                        foreach (var line in readLines()) {
                             WrittenLines.Add(line);
                         }
                     } catch (Exception error) {
@@ -179,6 +232,10 @@ namespace Kenet.SimpleProcess.Pipelines
             }
         }
 
+        /// <inheritdoc cref="Write(ConsumedMemoryOwner{byte}, ReadLinesDelegate)"/>
+        public void Write(ConsumedMemoryOwner<byte> memoryOwner) =>
+            Write(memoryOwner, ReadLines);
+
         private async Task CompleteAsync(bool synchronous)
         {
             List<Task> writeTasks;
@@ -187,11 +244,12 @@ namespace Kenet.SimpleProcess.Pipelines
                 EnsureNotDisposed();
                 EnsureNotCompleted();
 
-                writeTasks = _writeTasks;
-
-                if (Interlocked.CompareExchange(ref _writeTasks, default, writeTasks) == null) {
+                if (_writeTasks is null) {
                     return;
                 }
+
+                writeTasks = _writeTasks;
+                _writeTasks = null;
             }
 
             if (synchronous) {
@@ -202,7 +260,17 @@ namespace Kenet.SimpleProcess.Pipelines
 
             // We write directly to underlying buffer
             try {
-                if (TryReadLine(out var line, _sequence, newLineLength: 0, advanceStream: false)) {
+                if (_isCarriageReturnPending
+                    && TrySeekNewLineUnsafe(out var lineSequence, out var newLineLength)
+                    && TryReadLine(out var line, _sequence, newLineLength, advanceStream: true)) {
+                    if (synchronous) {
+                        WrittenLines.Add(line);
+                    } else {
+                        await WrittenLines.AddAsync(line);
+                    }
+                }
+
+                if (TryReadLine(out line, _sequence, newLineLength: 0, advanceStream: false)) {
                     if (synchronous) {
                         WrittenLines.Add(line);
                     } else {

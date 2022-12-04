@@ -10,7 +10,7 @@ namespace Kenet.SimpleProcess.Test
         [Theory]
         [InlineData(new object[] { true })]
         [InlineData(new object[] { false })]
-        public async Task Process_should_cancel_completion_after_process_cancellationAsync(bool synchronously)
+        public async Task Process_should_cancel_completion_after_process_cancellation(bool synchronously)
         {
             using var sleep = new SimpleProcess(CreateSleepStartInfo());
 

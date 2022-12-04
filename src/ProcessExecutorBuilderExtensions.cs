@@ -9,7 +9,7 @@ public static class ProcessExecutorBuilderExtensions
     /// Builds the process executor.
     /// </summary>
     /// <param name="builder"></param>
-    /// <returns></returns>
+    /// <returns>The constrcuted process executor.</returns>
     public static ProcessExecutor Build(this IProcessExecutorBuilder builder) =>
         new(builder.BuildArtifact());
 }

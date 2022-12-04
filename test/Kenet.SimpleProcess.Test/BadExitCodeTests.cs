@@ -13,7 +13,7 @@ namespace Kenet.SimpleProcess.Test
         [Theory]
         [InlineData(new object[] { true })]
         [InlineData(new object[] { false })]
-        public async Task Run_to_completion_should_throw_bad_exit_code_with_non_null_original_messageAsync(bool synchronously)
+        public async Task Run_to_completion_should_throw_bad_exit_code_with_non_null_original_message(bool synchronously)
         {
             var builder = ProcessExecutorBuilder.CreateDefault(CreateBadExitCodeLeadingProcessStartInfo());
             BadExitCodeException error;
@@ -30,7 +30,7 @@ namespace Kenet.SimpleProcess.Test
         [Theory]
         [InlineData(new object[] { true })]
         [InlineData(new object[] { false })]
-        public async Task Run_to_completion_should_throw_bad_exit_code_with_null_original_messageAsync(bool synchronously)
+        public async Task Run_to_completion_should_throw_bad_exit_code_with_null_original_message(bool synchronously)
         {
             var builder = new ProcessExecutorBuilder(CreateBadExitCodeLeadingProcessStartInfo()).WithExitCode(0);
             BadExitCodeException error;
@@ -47,7 +47,7 @@ namespace Kenet.SimpleProcess.Test
         [Theory]
         [InlineData(new object[] { true })]
         [InlineData(new object[] { false })]
-        public async Task Two_execution_run_to_completion_should_passAsync(bool synchronously)
+        public async Task Two_execution_run_to_completion_should_pass(bool synchronously)
         {
             using var execution = new ProcessExecutorBuilder(CreateBadExitCodeLeadingProcessStartInfo()).Run();
 
@@ -63,7 +63,7 @@ namespace Kenet.SimpleProcess.Test
         [Theory]
         [InlineData(new object[] { true })]
         [InlineData(new object[] { false })]
-        public async Task Two_default_execution_run_to_completion_should_passAsync(bool synchronously)
+        public async Task Two_default_execution_run_to_completion_should_pass(bool synchronously)
         {
             using var execution = ProcessExecutorBuilder.CreateDefault(CreateBadExitCodeLeadingProcessStartInfo()).Run();
 
@@ -83,7 +83,7 @@ namespace Kenet.SimpleProcess.Test
         [Theory]
         [InlineData(new object[] { true })]
         [InlineData(new object[] { false })]
-        public async Task Two_default_execution_run_to_completion_should_throw_bad_exit_code_then_throw_invalid_operationAsync(bool synchronously)
+        public async Task Two_default_execution_run_to_completion_should_throw_bad_exit_code_then_throw_invalid_operation(bool synchronously)
         {
             var execution = ProcessExecutorBuilder.CreateDefault(CreateBadExitCodeLeadingProcessStartInfo()).Run();
 
@@ -107,7 +107,7 @@ namespace Kenet.SimpleProcess.Test
         [Theory]
         [InlineData(new object[] { true })]
         [InlineData(new object[] { false })]
-        public async Task Two_default_execution_run_to_completion_should_return_exit_code_then_throw_invalid_operationAsync(bool synchronously)
+        public async Task Two_default_execution_run_to_completion_should_return_exit_code_then_throw_invalid_operation(bool synchronously)
         {
             var execution = new ProcessExecutorBuilder(CreateBadExitCodeLeadingProcessStartInfo()).Run();
 
@@ -131,7 +131,7 @@ namespace Kenet.SimpleProcess.Test
         [Theory]
         [InlineData(new object[] { true })]
         [InlineData(new object[] { false })]
-        public async Task Two_process_run_to_completion_should_return_exit_code_then_throw_invalid_operationAsync(bool synchronously)
+        public async Task Two_process_run_to_completion_should_return_exit_code_then_throw_invalid_operation(bool synchronously)
         {
             var process = new SimpleProcess(CreateBadExitCodeLeadingProcessStartInfo());
 
@@ -139,7 +139,7 @@ namespace Kenet.SimpleProcess.Test
                 using var _ = process;
 
                 if (synchronously) {
-                    (await process.RunToCompletionAsync()).Should().NotBe(0);
+                    process.RunToCompletion().Should().NotBe(0);
                 } else {
                     (await process.RunToCompletionAsync()).Should().NotBe(0);
                 }

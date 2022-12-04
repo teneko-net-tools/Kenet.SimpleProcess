@@ -10,7 +10,7 @@ namespace Kenet.SimpleProcess.Test
         [Theory]
         [InlineData(new object[] { true })]
         [InlineData(new object[] { false })]
-        public async Task Process_should_release_run_for_completion_when_disposedAsync(bool synchronously)
+        public async Task Process_should_release_run_for_completion_when_disposed(bool synchronously)
         {
             using var sleep = new SimpleProcess(CreateSleepStartInfo());
 

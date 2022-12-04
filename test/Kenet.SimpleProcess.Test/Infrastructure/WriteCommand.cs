@@ -21,7 +21,7 @@ namespace Kenet.SimpleProcess.Test.Infrastructure
         }
 
         internal static SimpleProcessStartInfo CreateWriteStartInfo() =>
-            new($"{WriteProcessName}{GetOSDependentExecutableExtension()}");
+            new(WriteProcessName + GetOSDependentExecutableExtension());
 
         internal static void KillRemainingWriteProcesses()
         {

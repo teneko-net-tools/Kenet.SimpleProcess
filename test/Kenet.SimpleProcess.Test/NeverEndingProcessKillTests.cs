@@ -10,7 +10,7 @@ namespace Kenet.SimpleProcess.Test
         [Theory]
         [InlineData(new object[] { true })]
         [InlineData(new object[] { false })]
-        public async Task Run_to_completion_should_wait_for_process_being_killedAsync(bool synchronously)
+        public async Task Run_to_completion_should_wait_for_process_being_killed(bool synchronously)
         {
             using var sleep = new SimpleProcess(CreateSleepStartInfo());
             sleep.Run();

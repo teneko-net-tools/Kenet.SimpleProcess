@@ -34,7 +34,7 @@ namespace Kenet.SimpleProcess.Test
         [InlineData(new object[] { false, 0, ProcessCompletionOptions.KillOnCancellation })]
         [InlineData(new object[] { true, 30, ProcessCompletionOptions.KillTreeOnCancellation })]
         [InlineData(new object[] { false, 30, ProcessCompletionOptions.KillTreeOnCancellation })]
-        public async Task Process_writes_eof_when_exiting_after_timeAsync(bool synchronously, int cancelledAfterMilliseconds, ProcessCompletionOptions completionOptions)
+        public async Task Process_writes_eof_when_exiting_after_time(bool synchronously, int cancelledAfterMilliseconds, ProcessCompletionOptions completionOptions)
         {
             CancellationTokenSource? cancellationTokenSource;
             CancellationToken cancellationToken;
@@ -83,9 +83,9 @@ namespace Kenet.SimpleProcess.Test
         [InlineData(new object[] { false, ProcessCompletionOptions.None })]
         [InlineData(new object[] { true, ProcessCompletionOptions.KillOnCancellation })]
         [InlineData(new object[] { false, ProcessCompletionOptions.KillOnCancellation })]
-        public async Task Parallel_processes_write_eof_when_exiting_after_timeAsync(bool synchronously, ProcessCompletionOptions completionOptions)
+        public async Task Parallel_processes_write_eof_when_exiting_after_time(bool synchronously, ProcessCompletionOptions completionOptions)
         {
-            await Task.WhenAll(Enumerable.Range(0, 10).Select(_ => Process_writes_eof_when_exiting_after_timeAsync(synchronously, cancelledAfterMilliseconds: 15, completionOptions)));
+            await Task.WhenAll(Enumerable.Range(0, 10).Select(_ => Process_writes_eof_when_exiting_after_time(synchronously, cancelledAfterMilliseconds: 15, completionOptions)));
         }
     }
 }

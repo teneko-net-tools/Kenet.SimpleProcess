@@ -11,7 +11,7 @@ namespace Kenet.SimpleProcess.Test
         private const int _cancelAfter = 1000 * 10;
 
         [Fact]
-        public async Task Process_written_fragments_are_correctAsync()
+        public async Task Process_written_fragments_are_correct()
         {
             var bufferBlocks = new List<string>();
             var numberOfBytes = 0;
@@ -36,7 +36,7 @@ namespace Kenet.SimpleProcess.Test
         }
 
         [Fact]
-        public async Task Process_written_lines_are_correctAsync()
+        public async Task Process_written_lines_are_correct()
         {
             var bufferLines = new List<string>();
 

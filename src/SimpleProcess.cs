@@ -72,10 +72,6 @@ public sealed class SimpleProcess :
     /// </summary>
     public WriteHandler? OutputWriter { private get; init; }
 
-    /// <inheritdoc/>
-    [MemberNotNullWhen(true, nameof(_readOutputTask), nameof(_readErrorTask))]
-    public bool IsRunning { get; private set; }
-
     /// <summary>
     /// The process id.
     /// </summary>
@@ -92,7 +88,14 @@ public sealed class SimpleProcess :
     public CancellationToken Started { get; }
 
     /// <inheritdoc/>
+    [MemberNotNullWhen(true, nameof(_readOutputTask), nameof(_readErrorTask))]
+    public bool HasStarted { get; private set; }
+
+    /// <inheritdoc/>
     public CancellationToken Cancelled { get; }
+
+    /// <inheritdoc/>
+    public bool IsCancelled => _processCancellationTokenSource.IsCancellationRequested;
 
     /// <inheritdoc/>
     public CancellationToken Exited { get; }
@@ -108,6 +111,7 @@ public sealed class SimpleProcess :
     private Task? _readOutputTask;
     private Task? _readErrorTask;
 
+    private readonly object _processEndingLock = new();
     private readonly CancellationTokenSource _processCancellationTokenSource;
     private readonly CancellationTokenSource _processExitedTokenSource;
     private readonly object _startProcessLock = new();
@@ -156,9 +160,26 @@ public sealed class SimpleProcess :
     [MemberNotNull(nameof(Id))]
     private void ThrowIfNotStarted()
     {
-        if (!IsRunning) {
+        if (!HasStarted) {
             throw new InvalidOperationException("The process has not been started yet");
         }
+    }
+
+    private ProcessStartInfo CreateAdaptiveStartInfo()
+    {
+        var startInfo = StartInfo.CreateProcessStartInfo();
+        startInfo.UseShellExecute = false;
+
+        if (OutputWriter is not null) {
+            startInfo.RedirectStandardOutput = true;
+        }
+
+        if (ErrorWriter is not null) {
+            startInfo.RedirectStandardError = true;
+        }
+
+        startInfo.CreateNoWindow = true;
+        return startInfo;
     }
 
     [MemberNotNull(nameof(_process))]
@@ -171,7 +192,7 @@ public sealed class SimpleProcess :
             return;
         }
 
-        var newProcess = new Process { StartInfo = StartInfo.CreateProcessStartInfo() };
+        var newProcess = new Process { StartInfo = CreateAdaptiveStartInfo() };
 
         if (Interlocked.CompareExchange(ref _process, newProcess, null) == null) {
             process = newProcess;
@@ -183,22 +204,20 @@ public sealed class SimpleProcess :
         process = currentProcess!;
     }
 
-    private void HandleProcessExit()
+    private void AnnounceProcessExit()
     {
-        if (IsExited) {
-            return;
-        }
+        lock (_processEndingLock) {
+            if (IsExited) {
+                return;
+            }
 
-        IsExited = true;
+            IsExited = true;
 
-        if (IsDisposed) {
-            return;
-        }
+            if (IsDisposed) {
+                return;
+            }
 
-        try {
-            _processExitedTokenSource.Cancel();
-        } catch (ObjectDisposedException) {
-            ; // Dispose() was faster
+            _processExitedTokenSource.TryCancel();
         }
     }
 
@@ -206,19 +225,19 @@ public sealed class SimpleProcess :
     private void StartProcess(Process process)
     {
         // Try non-lock version
-        if (IsRunning) {
+        if (HasStarted) {
             return;
         }
 
         lock (_startProcessLock) {
-            if (IsRunning) {
+            if (HasStarted) {
                 return;
             }
 
             process.EnableRaisingEvents = true;
 
             void OnProcessExited(object? sender, EventArgs e) =>
-                HandleProcessExit();
+                AnnounceProcessExit();
 
             process.Exited += OnProcessExited;
 
@@ -227,7 +246,7 @@ public sealed class SimpleProcess :
             }
 
             Id = process.Id;
-            IsRunning = true;
+            HasStarted = true;
             _processStartedTokenSource.Cancel();
 
             /* REMINDER: Exiting token is hitting faster than stream can be read, so don't use it */
@@ -275,8 +294,8 @@ public sealed class SimpleProcess :
             return;
         }
 
-        lock (_processCancellationTokenSource) {
-            if (_processCancellationTokenSource.IsCancellationRequested) {
+        lock (_processEndingLock) {
+            if (IsCancelled) {
                 return;
             }
 
@@ -291,8 +310,8 @@ public sealed class SimpleProcess :
             return;
         }
 
-        lock (_processCancellationTokenSource) {
-            if (_processCancellationTokenSource.IsCancellationRequested) {
+        lock (_processEndingLock) {
+            if (IsCancelled) {
                 return;
             }
 
@@ -307,8 +326,8 @@ public sealed class SimpleProcess :
             return;
         }
 
-        lock (_processCancellationTokenSource) {
-            if (_processCancellationTokenSource.IsCancellationRequested) {
+        lock (_processEndingLock) {
+            if (IsCancelled) {
                 return;
             }
 
@@ -416,7 +435,7 @@ public sealed class SimpleProcess :
 
             /* The process exited successfully */
             _exitCode ??= process.ExitCode;
-            HandleProcessExit();
+            AnnounceProcessExit();
         } catch (Exception error) {
             if (completionOptions != ProcessCompletionOptions.None
                 && error is OperationCanceledException
@@ -514,8 +533,9 @@ public sealed class SimpleProcess :
         _processStartedTokenSource.Dispose();
 
         // It can happen, that someone is in Cancel()
-        lock (_processCancellationTokenSource) {
-            _processCancellationTokenSource.Dispose();
+        lock (_processEndingLock) {
+            if (!IsExited)
+                _processCancellationTokenSource.Dispose();
         }
 
         _processExitedTokenSource.Dispose();

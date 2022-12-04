@@ -8,11 +8,10 @@ public class GitProcessTests
     {
         yield return new object[]
         {
-            ProcessExecutorBuilder.CreateDefault(new SimpleProcessStartInfo("git")
-            {
-                Arguments = "rev-parse --absolute-git-dir",
-                WorkingDirectory = AppContext.BaseDirectory
-            })
+            new ProcessStartInfoBuilder("git")
+            .WithOSIndependentArguments("rev-parse", "--absolute-git-dir")
+            .WithWorkingDirectory(AppContext.BaseDirectory)
+            .ToDefaultExecutorBuilder()
         };
     }
 
@@ -31,7 +30,7 @@ public class GitProcessTests
 
     [Theory]
     [MemberData(nameof(Git_rev_parse_output_should_be_captured_test_cases))]
-    public async Task Git_rev_parse_output_should_be_captured_asynchronouslyAsync(ProcessExecutorBuilder builder)
+    public async Task Git_rev_parse_output_should_be_captured_asynchronously(ProcessExecutorBuilder builder)
     {
         using var boundary = new ProcessBoundary();
 

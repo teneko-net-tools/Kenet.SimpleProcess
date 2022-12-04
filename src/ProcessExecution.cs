@@ -73,12 +73,16 @@ public sealed class ProcessExecution : IProcessExecution, IAsyncProcessExecution
         _process.Started;
 
     /// <inheritdoc/>
-    public bool IsRunning =>
-        _process.IsRunning;
+    public bool HasStarted =>
+        _process.HasStarted;
 
     /// <inheritdoc/>
     public CancellationToken Exited =>
         _process.Exited;
+
+    /// <inheritdoc/>
+    public bool IsCancelled =>
+        _process.IsCancelled;
 
     /// <inheritdoc/>
     public bool IsExited =>

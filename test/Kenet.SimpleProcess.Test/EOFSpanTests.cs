@@ -48,7 +48,7 @@ namespace Kenet.SimpleProcess.Test
         }
 
         [Fact]
-        public unsafe void Same_empty_span_pointers_are_eqal()
+        public unsafe void Same_empty_span_pointers_are_equal()
         {
             var empty = new byte[0];
 

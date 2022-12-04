@@ -1,5 +1,8 @@
 ﻿using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using Kenet.SimpleProcess.Arguments;
+using System.Runtime.InteropServices;
 
 namespace Kenet.SimpleProcess;
 
@@ -8,17 +11,18 @@ namespace Kenet.SimpleProcess;
 /// </summary>
 public record SimpleProcessStartInfo
 {
-    internal static readonly IReadOnlyDictionary<string, string> EmptyEnvironmentVariables =
-        ImmutableDictionary<string, string>.Empty;
-
-    private readonly IReadOnlyDictionary<string, string> _environmentVariables = EmptyEnvironmentVariables;
+    private static readonly bool IsWindowsPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
     /// <summary>
-    /// Creates an instance of type <see cref="SimpleProcessStartInfo" />.
+    /// Creates a new builder for creating an instance of type <see cref="SimpleProcessStartInfo"/>.
     /// </summary>
     /// <param name="executable"></param>
-    public SimpleProcessStartInfo(string executable) =>
-        Executable = executable ?? throw new ArgumentNullException(nameof(executable));
+    public static ProcessStartInfoBuilder NewBuilder(string executable) =>
+        new ProcessStartInfoBuilder(executable);
+
+    internal static string EscapeArguments(IEnumerable<string> unescapedArguments) => IsWindowsPlatform
+        ? PasteArguments.PasteForWindows(unescapedArguments, pasteFirstArgumentUsingArgV0Rules: false)
+        : PasteArguments.PasteForUnix(unescapedArguments, pasteFirstArgumentUsingArgV0Rules: false);
 
     /// <summary>
     /// The executable to start.
@@ -39,10 +43,20 @@ public record SimpleProcessStartInfo
     /// <summary>
     /// The environment variables that are copied once an instance of <see cref="ProcessStartInfo" /> is created.
     /// </summary>
+    [AllowNull]
     public IReadOnlyDictionary<string, string> EnvironmentVariables {
         get => _environmentVariables;
-        init => _environmentVariables = value ?? throw new ArgumentNullException(nameof(value));
+        init => _environmentVariables = value ?? ImmutableDictionary<string, string>.Empty;
     }
+
+    private readonly IReadOnlyDictionary<string, string> _environmentVariables = ImmutableDictionary<string, string>.Empty;
+
+    /// <summary>
+    /// Creates an instance of type <see cref="SimpleProcessStartInfo" />.
+    /// </summary>
+    /// <param name="executable"></param>
+    public SimpleProcessStartInfo(string executable) =>
+        Executable = executable ?? throw new ArgumentNullException(nameof(executable));
 
     internal ProcessStartInfo CreateProcessStartInfo()
     {
@@ -60,10 +74,6 @@ public record SimpleProcessStartInfo
             }
         }
 
-        processStartInfo.UseShellExecute = false;
-        processStartInfo.RedirectStandardOutput = true;
-        processStartInfo.RedirectStandardError = true;
-        processStartInfo.CreateNoWindow = true;
         return processStartInfo;
     }
 }

@@ -17,8 +17,7 @@ public sealed class ProcessExecutorBuilder :
     /// <param name="startInfo"></param>
     /// <param name="validExitCode"></param>
     /// <returns></returns>
-    public static ProcessExecutorBuilder CreateDefault(SimpleProcessStartInfo startInfo, int validExitCode) =>
-        new ProcessExecutorBuilder(startInfo)
+    public static ProcessExecutorBuilder CreateDefault(SimpleProcessStartInfo startInfo, int validExitCode) => new ProcessExecutorBuilder(startInfo)
         .WithExitCode(validExitCode)
         .WithErrorInterpretation();
 
@@ -28,8 +27,7 @@ public sealed class ProcessExecutorBuilder :
     /// <param name="startInfo"></param>
     /// <param name="validateExitCode"></param>
     /// <returns></returns>
-    public static ProcessExecutorBuilder CreateDefault(SimpleProcessStartInfo startInfo, Func<int, bool> validateExitCode) =>
-        new ProcessExecutorBuilder(startInfo)
+    public static ProcessExecutorBuilder CreateDefault(SimpleProcessStartInfo startInfo, Func<int, bool> validateExitCode) => new ProcessExecutorBuilder(startInfo)
         .WithExitCode(validateExitCode)
         .WithErrorInterpretation();
 

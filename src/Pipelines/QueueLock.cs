@@ -42,6 +42,9 @@
             }
         }
 
+        public void Enter() =>
+            Enter(DrawPosition());
+
         public void Exit()
         {
             Interlocked.Increment(ref _nextEnterablePosition);
