@@ -171,7 +171,7 @@ public sealed class ProcessExecutor :
         });
 
         var waitForExecution = new TaskCompletionSource<ProcessExecution>();
-        OnRun(waitForExecution.SetResult);
+        this.OnRun(waitForExecution.TrySetResult);
 
         async IAsyncEnumerable<string> CreateAsyncEnumerable([EnumeratorCancellation] CancellationToken enumeratorCancellationToken = default)
         {
@@ -179,7 +179,7 @@ public sealed class ProcessExecutor :
             var linkedCancellationToken = cancellationTokenSource.Token;
 
             try {
-                _ = linkedCancellationToken.Register(() => waitForExecution.SetException(new OperationCanceledException(linkedCancellationToken)), useSynchronizationContext: false);
+                _ = linkedCancellationToken.Register(() => waitForExecution.TrySetException(new OperationCanceledException(linkedCancellationToken)), useSynchronizationContext: false);
                 var execution = await waitForExecution.Task.ConfigureAwait(false);
                 using var cancelOnProcessCancellation = execution.Cancelled.Register(cancellationTokenSource.Cancel, useSynchronizationContext: false);
 

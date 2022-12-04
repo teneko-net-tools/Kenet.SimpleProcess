@@ -9,7 +9,7 @@
             <![CDATA[A simple process trying to replace the bootstrap code of a native instance of System.Diagnostic.Process.
 Supports synchronous and asynchronous workflows. The support of .NET Standard 2.0 is the main goal of this library.]]>
         </Description>
-        <PackageTags>process</PackageTags>
+        <PackageTags>process;async;executor;runner;starter;start;run;execute;execution;exit-code;exit;code;executable;interface;standard;error;output;arguments;killtree;helper;wrapper;simple;cli;command-line-interface;command-line;command;shell;netstandard;net;standard;framework;core;line;IAsyncEnumerable</PackageTags>
         <LangVersion>latest</LangVersion>
         <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
         <NoWarn>CS8774;VSTHRD103;RCS1038;VSTHRD002</NoWarn>
