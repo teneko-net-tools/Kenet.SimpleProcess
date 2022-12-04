@@ -1,5 +1,7 @@
 # Kenet.SimpleProcess
 
+[![Nuget][nuget-package-badge]][nuget-package]
+
 This library is a tiny wrapper around `System.Diagnostics.Process`. In the past I faced often the problem, that it was not easy and reliable to grab the output stream for a process without potencially producing a dead lock. To eliminate this and reduce the overall boilerplate for capturing the output or error stream of a process, I have forged the library.
 
 ## Features
@@ -66,3 +68,6 @@ This library is just a simple process wrapper and does not cover the full `Syste
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+[nuget-package]: https://www.nuget.org/packages/Kenet.SimpleProcess
+[nuget-package-badge]: https://img.shields.io/nuget/v/Kenet.SimpleProcess
