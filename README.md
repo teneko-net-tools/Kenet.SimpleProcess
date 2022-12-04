@@ -40,9 +40,13 @@ using var execution = ProcessExecutorBuilder.CreateDefault(startInfo)
     .WriteToAsyncLines(x => x.AddOutputWriter, out var asyncLines)
     .Run(); // Starts the process, but does not wait for completion
 
+var lines = new List<string>();
+
 // This waits implicitly for completion.
 // It may throw an exception if the process gets cancelled.
-var lines = await asyncLines.ToListAsync();
+await foreach (var line in asyncLines) {
+    lines.Add(line);
+}
 
 // 'lines' is equivalent to: (without #. "")
 // 0. "b984dd7 Added builder for SimpleProcessStartInfo"
