@@ -19,7 +19,7 @@ namespace Kenet.SimpleProcess.Test
                 sleep.Dispose();
             });
 
-            using var canceller = new CancellationTokenSource(200);
+            using var canceller = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
             OperationCanceledException operationCanceledException;
 
