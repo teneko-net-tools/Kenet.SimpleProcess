@@ -6,7 +6,7 @@ namespace Kenet.SimpleProcess.Test
 {
     [Collection(KillingProcessesCollection.CollectionName)]
     public class NeverEndingProcessAsyncLinesTests
-    {       
+    {
         [Fact]
         public async Task Awaiting_cancelled_async_lines_should_throw()
         {

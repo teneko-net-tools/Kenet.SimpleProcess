@@ -1,11 +1,10 @@
 ﻿using System;
-using System.Threading.Tasks;
 
 namespace Kenet.SimpleProcess.Write;
 
 internal class Program
 {
-    public static async Task Main(string[] args)
+    public static void Main(string[] args)
     {
         Console.WriteLine("");
 

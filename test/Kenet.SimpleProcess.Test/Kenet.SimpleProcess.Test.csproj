@@ -1,37 +1,38 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
-	<PropertyGroup>
-        <TargetFrameworks>net48;netcoreapp3.1;net5.0</TargetFrameworks>
-        <!--<TargetFramework>net5.0</TargetFramework>-->
-		<ImplicitUsings>enable</ImplicitUsings>
-		<Nullable>enable</Nullable>
-		<IsPackable>false</IsPackable>
-		<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
-	</PropertyGroup>
+  <PropertyGroup>
+    <TargetFrameworks>net48;netcoreapp3.1;net5.0</TargetFrameworks>
+    <!--<TargetFramework>net5.0</TargetFramework>-->
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+    <NoWarn>VSTHRD003</NoWarn>
+  </PropertyGroup>
 
-	<ItemGroup>
-		<PackageReference Include="FluentAssertions" Version="6.8.0" />
-		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.3.2" />
-		<PackageReference Include="System.Linq.Async" Version="6.0.1" />
-		<PackageReference Include="Teronis.DotNet.EditorConfig.Test" Version="0.3.0-alpha.4">
-		  <PrivateAssets>all</PrivateAssets>
-		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-		</PackageReference>
-		<PackageReference Include="xunit" Version="2.4.2" />
-		<PackageReference Include="xunit.runner.visualstudio" Version="2.4.5">
-			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-			<PrivateAssets>all</PrivateAssets>
-		</PackageReference>
-		<PackageReference Include="coverlet.collector" Version="3.1.2">
-			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-			<PrivateAssets>all</PrivateAssets>
-		</PackageReference>
-	</ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="FluentAssertions" Version="6.8.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.3.2" />
+    <PackageReference Include="System.Linq.Async" Version="6.0.1" />
+    <PackageReference Include="Kenet.CSharp.Conventions.Test" Version="0.3.0-alpha.5">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="xunit" Version="2.4.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.5">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="coverlet.collector" Version="3.1.2">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
 
-	<ItemGroup>
-		<ProjectReference Include="..\..\src\Kenet.SimpleProcess.csproj" />
-		<ProjectReference Include="..\Kenet.SimpleProcess.Sleep\Kenet.SimpleProcess.Sleep.csproj" />
-		<ProjectReference Include="..\Kenet.SimpleProcess.Write\Kenet.SimpleProcess.Write.csproj" />
-	</ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Kenet.SimpleProcess.csproj" />
+    <ProjectReference Include="..\Kenet.SimpleProcess.Sleep\Kenet.SimpleProcess.Sleep.csproj" />
+    <ProjectReference Include="..\Kenet.SimpleProcess.Write\Kenet.SimpleProcess.Write.csproj" />
+  </ItemGroup>
 
 </Project>

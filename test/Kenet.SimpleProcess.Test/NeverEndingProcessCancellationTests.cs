@@ -19,7 +19,7 @@ namespace Kenet.SimpleProcess.Test
                 : sleep.RunToCompletionAsync();
 
             sleep.Cancel();
-            await runTask.Awaiting(x => x).Should().ThrowAsync<OperationCanceledException>();
+            await FluentActions.Awaiting(() => runTask).Should().ThrowAsync<OperationCanceledException>();
         }
     }
 }
