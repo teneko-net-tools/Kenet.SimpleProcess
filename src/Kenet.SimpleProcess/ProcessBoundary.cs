@@ -1,14 +1,16 @@
-﻿namespace Kenet.SimpleProcess;
+﻿using System.Diagnostics.CodeAnalysis;
+
+namespace Kenet.SimpleProcess;
 
 /// <summary>
 /// Represents the "boundary" of a process. When you decide to dispose this boundary, then all instances that got associated with this boundary are disposed too.
 /// </summary>
 public readonly struct ProcessBoundary : IDisposable
 {
-    private const int _defaultInitialCapacity = 4;
+    private const int DefaultInitialCapacity = 4;
 
-    private static readonly List<IDisposable?> _disposedIndicatingList = new(capacity: 0);
-    private static readonly List<IDisposable?> _invalidatedIndicatingList = new(capacity: 1);
+    private static readonly List<IDisposable?> s_disposedIndicatingList = new(capacity: 0);
+    private static readonly List<IDisposable?> s_invalidatedIndicatingList = new(capacity: 1);
 
     /// <summary>
     /// Represents a boundary that is already disposed.
@@ -18,7 +20,7 @@ public readonly struct ProcessBoundary : IDisposable
     /// <summary>
     /// Represents a special boundary that is in a faulty state. Any attempt to add an association or to dispsoe the instance results into an <see cref="InvalidOperationException"/>.
     /// </summary>
-    internal static readonly ProcessBoundary Faulted = new ProcessBoundary(initialCapacity: 1);
+    public static readonly ProcessBoundary Faulted = default;
 
     internal static void DisposeOrFailSilently(IDisposable? instance)
     {
@@ -33,7 +35,7 @@ public readonly struct ProcessBoundary : IDisposable
     /// Indicates whether the boundary has been disposed or not.
     /// </summary>
     public bool IsDisposed =>
-        _buffer.Capacity == 0;
+        !IsFaulted && _buffer.Capacity == 0;
 
     /// <summary>
     /// Indicates whether the boundary has been invalidated or not.
@@ -41,10 +43,11 @@ public readonly struct ProcessBoundary : IDisposable
     /// <remarks>
     /// If <see langword="true"/> it is not allowed to associate further disposables with this boundary.
     /// </remarks>
-    internal bool IsFaulted =>
-        _buffer.Capacity == 1;
+    [MemberNotNullWhen(false, nameof(_buffer))]
+    public bool IsFaulted =>
+        _buffer is null;
 
-    private readonly List<IDisposable?> _buffer;
+    private readonly List<IDisposable?>? _buffer;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProcessBoundary"/> class.
@@ -53,18 +56,19 @@ public readonly struct ProcessBoundary : IDisposable
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="initialCapacity"/> is not valid.</exception>
     private ProcessBoundary(int initialCapacity) =>
         _buffer = initialCapacity == 0
-            ? _disposedIndicatingList
+            ? s_disposedIndicatingList
             : (initialCapacity == 1
-                ? _invalidatedIndicatingList
+                ? s_invalidatedIndicatingList
                 : new List<IDisposable?>(initialCapacity));
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProcessBoundary"/> class.
     /// </summary>
-    public ProcessBoundary() : this(_defaultInitialCapacity)
+    public ProcessBoundary() : this(DefaultInitialCapacity)
     {
     }
 
+    [MemberNotNull(nameof(_buffer))]
     private void EnsureNotFaulted()
     {
         if (IsFaulted) {
@@ -145,6 +149,8 @@ public readonly struct ProcessBoundary : IDisposable
     /// <exception cref="ArgumentOutOfRangeException"></exception>
     internal void DisableAssociations(int start, int length)
     {
+        EnsureNotFaulted();
+
         lock (_buffer) {
             if (IsDisposed) {
                 return;
