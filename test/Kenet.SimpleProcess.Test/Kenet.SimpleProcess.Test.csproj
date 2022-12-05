@@ -30,7 +30,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Kenet.SimpleProcess.csproj" />
+    <ProjectReference Include="..\..\src\Kenet.SimpleProcess\Kenet.SimpleProcess.csproj" />
     <ProjectReference Include="..\Kenet.SimpleProcess.Sleep\Kenet.SimpleProcess.Sleep.csproj" />
     <ProjectReference Include="..\Kenet.SimpleProcess.Write\Kenet.SimpleProcess.Write.csproj" />
   </ItemGroup>

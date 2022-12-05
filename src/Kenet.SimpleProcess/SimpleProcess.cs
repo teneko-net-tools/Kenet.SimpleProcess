@@ -427,7 +427,7 @@ public sealed class SimpleProcess :
                 // See above.
                 if (!cancellationToken.IsCancellationRequested) {
                     // This will not throw in case of cancellation of any task
-                    await Task.WhenAll(readOutputTask, readErrorTask);
+                    await Task.WhenAll(readOutputTask, readErrorTask).ConfigureAwait(false);
                 }
 
                 whenAnyTask.GetAwaiter().GetResult();

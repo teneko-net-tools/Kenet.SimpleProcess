@@ -17,7 +17,7 @@ namespace Kenet.SimpleProcess.Test
                 .WriteToAsyncLines(x => x.AddOutputWriter, out var asyncLines)
                 .Run();
 
-            sleep.CancelAfter(50);
+            sleep.CancelAfter(100);
             await asyncLines.Awaiting(x => x.ToListAsync()).Should().ThrowAsync<OperationCanceledException>();
         }
     }

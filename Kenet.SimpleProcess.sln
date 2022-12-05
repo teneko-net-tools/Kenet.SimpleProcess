@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Kenet.SimpleProcess", "src\Kenet.SimpleProcess.csproj", "{701CD819-13C1-4B1D-8608-0F35CFCCB153}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Kenet.SimpleProcess", "src\Kenet.SimpleProcess\Kenet.SimpleProcess.csproj", "{701CD819-13C1-4B1D-8608-0F35CFCCB153}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{7739BCD5-610A-4D5C-A86E-D0B24C649C4B}"
 EndProject

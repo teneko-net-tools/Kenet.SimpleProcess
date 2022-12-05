@@ -38,7 +38,7 @@ public static class RunnableProcessExecutionExtensions
     public static async Task<int> RunToCompletionAsync(this IRunnable<IAsyncProcessExecution> process, CancellationToken cancellationToken, ProcessCompletionOptions completionOptions)
     {
         using var execution = process.Run();
-        return await execution.RunToCompletionAsync(cancellationToken, completionOptions);
+        return await execution.RunToCompletionAsync(cancellationToken, completionOptions).ConfigureAwait(false);
     }
 
     /// <summary>

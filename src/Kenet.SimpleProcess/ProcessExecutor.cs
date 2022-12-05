@@ -186,11 +186,13 @@ public sealed class ProcessExecutor :
                 // REMINDER: OutputAvailableAsync() won't throw OperationCanceledException, it will just return false without error,
                 // so we use WaitAsync() to provoce an exception. We this approach we also ensure the release of OutputAvailableAsync
                 // originated from the cancellation token.
-                while (await lineStream.WrittenLines.OutputAvailableAsync().WaitAsync(linkedCancellationToken).ConfigureAwait(false)) {
+                while (await lineStream.WrittenLines.OutputAvailableAsync(linkedCancellationToken).ConfigureAwait(false)) {
                     // When taking, no blocking wait will be involved due to previous OutputAvailableAsync()
                     using var bytesOwner = lineStream.WrittenLines.Take();
                     yield return encoding.GetString(bytesOwner.ConsumedMemory.Span, bytesOwner.ConsumedCount);
                 }
+
+                linkedCancellationToken.ThrowIfCancellationRequested();
             } finally {
                 lock (readCancellationTokenSource) {
                     if (!isReadCancellationTokenSourceDisposed) {

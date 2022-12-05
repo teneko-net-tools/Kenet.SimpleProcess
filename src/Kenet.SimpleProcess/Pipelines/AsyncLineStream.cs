@@ -266,7 +266,7 @@ namespace Kenet.SimpleProcess.Pipelines
                     if (synchronous) {
                         WrittenLines.Add(line);
                     } else {
-                        await WrittenLines.AddAsync(line);
+                        await WrittenLines.AddAsync(line).ConfigureAwait(false);
                     }
                 }
 
@@ -274,7 +274,7 @@ namespace Kenet.SimpleProcess.Pipelines
                     if (synchronous) {
                         WrittenLines.Add(line);
                     } else {
-                        await WrittenLines.AddAsync(line);
+                        await WrittenLines.AddAsync(line).ConfigureAwait(false);
                     }
                 }
             } catch (Exception error) {
@@ -283,7 +283,7 @@ namespace Kenet.SimpleProcess.Pipelines
                 if (synchronous) {
                     WrittenLines.Add(memoryOwner);
                 } else {
-                    await WrittenLines.AddAsync(memoryOwner);
+                    await WrittenLines.AddAsync(memoryOwner).ConfigureAwait(false);
                 }
             }
 

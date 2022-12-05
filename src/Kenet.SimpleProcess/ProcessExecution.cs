@@ -190,11 +190,17 @@ public sealed class ProcessExecution : IProcessExecution, IAsyncProcessExecution
         return _capturedException ?? error;
     }
 
-    /// <inheritdoc />
-    public int RunToCompletion(CancellationToken cancellationToken, ProcessCompletionOptions completionOptions)
+    private async Task<int> RunToCompletionAsync(bool synchronous, CancellationToken cancellationToken, ProcessCompletionOptions completionOptions)
     {
         try {
-            var exitCode = _process.RunToCompletion(cancellationToken, completionOptions);
+            int exitCode;
+
+            if (synchronous) {
+                exitCode = _process.RunToCompletion(cancellationToken, completionOptions);
+            } else {
+                exitCode = await _process.RunToCompletionAsync(cancellationToken, completionOptions).ConfigureAwait(false);
+            }
+
             CheckExitCode(exitCode);
             return exitCode;
         } catch (Exception error) {
@@ -203,16 +209,12 @@ public sealed class ProcessExecution : IProcessExecution, IAsyncProcessExecution
     }
 
     /// <inheritdoc />
-    public async Task<int> RunToCompletionAsync(CancellationToken cancellationToken, ProcessCompletionOptions completionOptions)
-    {
-        try {
-            var exitCode = await _process.RunToCompletionAsync(cancellationToken, completionOptions);
-            CheckExitCode(exitCode);
-            return exitCode;
-        } catch (Exception error) {
-            throw GetCapturedOrFallbackError(error);
-        }
-    }
+    public int RunToCompletion(CancellationToken cancellationToken, ProcessCompletionOptions completionOptions) =>
+        RunToCompletionAsync(synchronous: true, cancellationToken, completionOptions).GetAwaiter().GetResult();
+
+    /// <inheritdoc />
+    public Task<int> RunToCompletionAsync(CancellationToken cancellationToken, ProcessCompletionOptions completionOptions) =>
+        RunToCompletionAsync(synchronous: false, cancellationToken, completionOptions);
 
     /// <inheritdoc/>
     public void Kill() =>
