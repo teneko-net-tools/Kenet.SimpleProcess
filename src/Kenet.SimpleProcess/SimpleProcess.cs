@@ -249,14 +249,16 @@ public sealed class SimpleProcess :
             HasStarted = true;
             _processStartedTokenSource.Cancel();
 
-            /* REMINDER: Exiting token is hitting faster than stream can be read, so don't use it */
+            /* REMINDER:
+             * 1. Exiting token is hitting faster than stream can be read, so don't use it
+             * 2. We must perform the read tasks in the thread pool synchronization context, otherwise we face deadlocks when synchronously waiting for them */
 
             _readOutputTask = OutputWriter is not null
-                ? ReadStreamAsync(process.StandardOutput.BaseStream, OutputWriter, Cancelled)
+                ? Task.Run(async () => await ReadStreamAsync(process.StandardOutput.BaseStream, OutputWriter, Cancelled).ConfigureAwait(false))
                 : Task.CompletedTask;
 
             _readErrorTask = ErrorWriter is not null
-                ? ReadStreamAsync(process.StandardError.BaseStream, ErrorWriter, Cancelled)
+                ? Task.Run(async () => await ReadStreamAsync(process.StandardError.BaseStream, ErrorWriter, Cancelled).ConfigureAwait(false))
                 : Task.CompletedTask;
         }
     }
