@@ -7,14 +7,15 @@ together {
     SimpleProcessStartInfo -[hidden]> SimpleProcess
 
     class SimpleProcess {
-        Equivalent to System.Diagnostics.Process
+        Equivalent to 
+        System.Diagnostics.Process
         --
-        + void Run()
-        + void Cancel()
-        + void CancelAfter(..)
-        + int RunToCompletion(..)
-        + Task<int> RunToCompletionAsync(..)
-        + void Kill(..)
+        + Run()
+        + Cancel()
+        + CancelAfter(..)
+        + RunToCompletion(..)
+        + RunToCompletionAsync(..)
+        + Kill(..)
     }
     SimpleProcess o- SimpleProcessStartInfo : requires >
 }
