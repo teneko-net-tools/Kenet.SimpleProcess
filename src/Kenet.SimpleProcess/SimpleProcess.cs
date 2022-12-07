@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.ExceptionServices;
+using Kenet.SimpleProcess.Threading;
 
 namespace Kenet.SimpleProcess;
 
@@ -228,7 +229,7 @@ public sealed partial class SimpleProcess :
                 return;
             }
 
-            _processExitedTokenSource.TryCancel();
+            _processExitedTokenSource.TryCancel(CancellationErrorDiscardHandling.ObjectDisposed);
         }
     }
 
@@ -301,7 +302,7 @@ public sealed partial class SimpleProcess :
     }
 
     /// <inheritdoc/>
-    public void Cancel()
+    private void Cancel(bool keepCancellationFromThrowing)
     {
         if (IsDisposed) {
             return;
@@ -312,9 +313,17 @@ public sealed partial class SimpleProcess :
                 return;
             }
 
-            _processCancellationTokenSource.TryCancel();
+            if (keepCancellationFromThrowing) {
+                _processCancellationTokenSource.TryCancel();
+            } else {
+                _processCancellationTokenSource.Cancel();
+            }
         }
     }
+
+    /// <inheritdoc/>
+    public void Cancel() =>
+        Cancel(keepCancellationFromThrowing: false);
 
     private async Task<int> RunToCompletionAsync(
         bool synchronously,
@@ -347,7 +356,7 @@ public sealed partial class SimpleProcess :
             // 3. If the user only wants to wait for the process exit, we ignore reader tasks, because they may get faulted or canceled.
             Task PrepareReadTask(Task readTask) => readTask.IsCompleted || completionOptions.HasFlag(ProcessCompletionOptions.WaitForExit)
                 ? Task.CompletedTask
-                : readTask.ContinueWithCallbackOnFailure(cancellationTokenSource.Cancel);
+                : readTask.ContinueWithCallbackOnFailure(cancellationTokenSource.TryCancel);
 
             var readOutputTask = PrepareReadTask(_readOutputTask);
             var readErrorTask = PrepareReadTask(_readErrorTask);
@@ -491,8 +500,8 @@ public sealed partial class SimpleProcess :
     {
         CheckProcessStarted();
 
-#if NET5_0_OR_GREATER
         // ISSUE: This acts asynchronous, whereby KillTree acts synchronously
+#if NET5_0_OR_GREATER
         _process.Kill(entireProcessTree);
 #else
         // https://unix.stackexchange.com/a/124148
@@ -513,7 +522,7 @@ public sealed partial class SimpleProcess :
         _timer?.Dispose();
 
         // Cancels all running operations
-        Cancel();
+        Cancel(keepCancellationFromThrowing: true);
 
         _process?.Dispose();
         _processStartedTokenSource.Dispose();
