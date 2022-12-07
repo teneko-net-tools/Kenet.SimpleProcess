@@ -4,9 +4,9 @@ public partial class SimpleProcess
 {
     private static readonly TimerCallback s_timerCallback = new TimerCallback(OnTimerCallback);
 
-    private static void OnTimerCallback(object obj)
+    private static void OnTimerCallback(object? obj)
     {
-        var process = (SimpleProcess)obj;
+        var process = (SimpleProcess)obj!;
 
         if (!process.IsDisposed) {
             process.Cancel();
