@@ -35,5 +35,5 @@ public static partial class ProcessExecutorBuilderGenericExtensions
         out BufferReader<byte> bufferReader,
         ProcessBoundary boundary)
         where T : IProcessExecutorMutator =>
-        WriteToBufferReader(mutator, mutator => writeTo => writeToHandlerProvider(mutator)(writeTo), out bufferReader, boundary);
+        WriteToBufferReader(mutator, mutator => (Action<WriteHandler>)(writeTo => writeToHandlerProvider(mutator)(writeTo)), out bufferReader, boundary);
 }

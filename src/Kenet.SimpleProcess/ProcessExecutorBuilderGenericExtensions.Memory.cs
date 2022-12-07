@@ -24,12 +24,8 @@ public static partial class ProcessExecutorBuilderGenericExtensions
         Func<T, Func<WriteHandler, object>> writeToHandlerProvider,
         Memory<byte> memory,
         int startIndex)
-        where T : IProcessExecutorMutator
-    {
-        var writerHandler = writeToHandlerProvider(mutator);
-        void WriteHandler(WriteHandler bytes) => _ = writerHandler(bytes);
-        return WriteToMemory(mutator, _ => WriteHandler, memory, startIndex);
-    }
+        where T : IProcessExecutorMutator =>
+        WriteToMemory(mutator, mutator => (Action<WriteHandler>)(writeTo => writeToHandlerProvider(mutator)(writeTo)), memory, startIndex);
 
     public static T WriteToMemory<T>(
         this T mutator,
@@ -42,10 +38,6 @@ public static partial class ProcessExecutorBuilderGenericExtensions
         this T mutator,
         Func<T, Func<WriteHandler, object>> writeToHandlerProvider,
         Memory<byte> memory)
-        where T : IProcessExecutorMutator
-    {
-        var writerHandler = writeToHandlerProvider(mutator);
-        void WriteHandler(WriteHandler bytes) => _ = writerHandler(bytes);
-        return WriteToMemory(mutator, _ => WriteHandler, memory);
-    }
+        where T : IProcessExecutorMutator =>
+        WriteToMemory(mutator, mutator => (Action<WriteHandler>)(writeTo => writeToHandlerProvider(mutator)(writeTo)), memory);
 }

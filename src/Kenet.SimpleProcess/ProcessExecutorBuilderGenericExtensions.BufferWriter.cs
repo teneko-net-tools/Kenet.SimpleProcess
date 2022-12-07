@@ -27,5 +27,5 @@ public static partial class ProcessExecutorBuilderGenericExtensions
         Func<T, Func<WriteHandler, object>> writeToHandlerProvider,
         IBufferWriter<byte> bufferWriter)
         where T : IProcessExecutorMutator =>
-        WriteToBufferWriter(mutator, mutator => writeTo => writeToHandlerProvider(mutator)(writeTo), bufferWriter);
+        WriteToBufferWriter(mutator, mutator => (Action<WriteHandler>)(writeTo => writeToHandlerProvider(mutator)(writeTo)), bufferWriter);
 }

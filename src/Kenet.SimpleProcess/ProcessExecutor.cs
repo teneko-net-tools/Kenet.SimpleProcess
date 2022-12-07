@@ -12,7 +12,7 @@ namespace Kenet.SimpleProcess;
 public sealed class ProcessExecutor :
     IRunnable<IProcessExecution>,
     IRunnable<IAsyncProcessExecution>,
-    IProcessExecutorMutator
+    IProcessExecutionMutator
 {
     private readonly SealableProcessExecutorArtifact _artifact;
     private ProcessExecution? _execution;
@@ -109,11 +109,14 @@ public sealed class ProcessExecutor :
     /// Places a callback in case you call <see cref="Run"/> directly or implictly.
     /// </summary>
     /// <inheritdoc cref="WithExitCode(Func{int, bool})" path="/*[position()>last()-2]"/>
-    public ProcessExecutor OnRun(Action<ProcessExecution> callback)
+    public ProcessExecutor NotifyWhenStarted(Action<ProcessExecution> callback)
     {
         _artifact.OnRun(callback);
         return this;
     }
+
+    void IProcessExecutionMutator.NotifyWhenStarted(Action<IProcessInfo> callback) =>
+        NotifyWhenStarted(callback);
 
     /// <summary>
     /// Writes internally to a stream that gets asynchronously redirected to <paramref name="asyncLines"/>.

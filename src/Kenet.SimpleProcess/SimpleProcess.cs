@@ -48,8 +48,8 @@ public sealed class SimpleProcess :
                 writeNextBytes(memoryOwner.Memory.Span[..lastWrittenBytesCount]);
                 goto tryReadNext;
             }
-        } catch (OperationCanceledException error) when (
-            error.CancellationToken.Equals(cancellationToken)) {
+        } catch (OperationCanceledException error) when (error.CancellationToken.Equals(cancellationToken)) {
+            ; // Ignore on purpose
         } finally {
             writeNextBytes(EOF.Memory.Span);
         }
