@@ -62,4 +62,9 @@ public interface IProcessInfo
     /// Indicates that the process has been disposed.
     /// </summary>
     bool IsDisposed { get; }
+
+    /// <summary>
+    /// Indicates that the process has been exited or cancelled.
+    /// </summary>
+    bool IsCompleted { get; }
 }

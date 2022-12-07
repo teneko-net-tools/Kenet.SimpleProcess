@@ -92,6 +92,10 @@ public sealed class ProcessExecution : IProcessExecution, IAsyncProcessExecution
         _process.Cancelled;
 
     /// <inheritdoc/>
+    public bool IsCompleted => 
+        _process.IsCompleted;
+
+    /// <inheritdoc/>
     public bool IsDisposed =>
         _process.IsDisposed;
 
@@ -132,8 +136,8 @@ public sealed class ProcessExecution : IProcessExecution, IAsyncProcessExecution
         _process.Cancel();
 
     /// <inheritdoc/>
-    public void CancelAfter(int delayInMilliseconds) =>
-        _process.CancelAfter(delayInMilliseconds);
+    public void CancelAfter(int millisecondsDelay) =>
+        _process.CancelAfter(millisecondsDelay);
 
     /// <inheritdoc/>
     public void CancelAfter(TimeSpan delay) =>

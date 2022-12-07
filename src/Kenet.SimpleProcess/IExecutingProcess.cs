@@ -28,7 +28,7 @@ public interface IExecutingProcess : IProcessInfo
     /// </remarks>
     /// <exception cref="ObjectDisposedException"/>
     /// <exception cref="ArgumentOutOfRangeException"/>
-    void CancelAfter(int delayInMilliseconds);
+    void CancelAfter(int millisecondsDelay);
 
     /// <summary>
     /// Cancels the current process after the delay.

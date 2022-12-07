@@ -26,14 +26,14 @@ namespace Kenet.SimpleProcess.Test
         }
 
         [Theory]
-        [InlineData(new object[] { true, 0, ProcessCompletionOptions.None })]
-        [InlineData(new object[] { false, 0, ProcessCompletionOptions.None })]
-        [InlineData(new object[] { true, 30, ProcessCompletionOptions.None })]
-        [InlineData(new object[] { false, 30, ProcessCompletionOptions.None })]
+        //[InlineData(new object[] { true, 0, ProcessCompletionOptions.None })]
+        //[InlineData(new object[] { false, 0, ProcessCompletionOptions.None })]
+        //[InlineData(new object[] { true, 30, ProcessCompletionOptions.None })]
+        //[InlineData(new object[] { false, 30, ProcessCompletionOptions.None })]
         [InlineData(new object[] { true, 0, ProcessCompletionOptions.KillOnCancellation })]
-        [InlineData(new object[] { false, 0, ProcessCompletionOptions.KillOnCancellation })]
-        [InlineData(new object[] { true, 30, ProcessCompletionOptions.KillTreeOnCancellation })]
-        [InlineData(new object[] { false, 30, ProcessCompletionOptions.KillTreeOnCancellation })]
+        //[InlineData(new object[] { false, 0, ProcessCompletionOptions.KillOnCancellation })]
+        //[InlineData(new object[] { true, 30, ProcessCompletionOptions.KillTreeOnCancellation })]
+        //[InlineData(new object[] { false, 30, ProcessCompletionOptions.KillTreeOnCancellation })]
         public async Task Process_writes_eof_when_exiting_after_time(bool synchronously, int cancelledAfterMilliseconds, ProcessCompletionOptions completionOptions)
         {
             CancellationTokenSource? cancellationTokenSource;

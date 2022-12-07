@@ -8,7 +8,7 @@ namespace Kenet.SimpleProcess;
 /// <summary>
 /// A simple process trying to replace the bootstrap code of a native instance of <see cref="Process"/>.
 /// </summary>
-public sealed class SimpleProcess :
+public sealed partial class SimpleProcess :
     IProcessExecution,
     IAsyncProcessExecution,
     IRunnable<IProcessExecution>,
@@ -17,7 +17,7 @@ public sealed class SimpleProcess :
     private static readonly TimeSpan s_defaultKillTreeTimeout = TimeSpan.FromSeconds(10);
 
     private static async Task ReadStreamAsync(
-        NamedStream source,
+        StreamTuple source,
         WriteHandler writeNextBytes,
         CancellationToken cancellationToken)
     {
@@ -26,10 +26,9 @@ public sealed class SimpleProcess :
         var cancellableTask = cancellableTaskSource.Task;
 
         using var cancelTaskSource = cancellationToken.Register(
-            () => cancellableTaskSource.SetException(new OperationCanceledException($"Reading the stream (\"{source.Name}\") has been cancelled", cancellationToken)),
+            () => _ = cancellableTaskSource.TrySetException(new OperationCanceledException($"Reading the stream (\"{source.Name}\") has been cancelled", cancellationToken)),
             useSynchronizationContext: false);
 
-        Task<int>? lastWrittenBytesCountTask = null;
         using var memoryOwner = MemoryPool<byte>.Shared.Rent(1024 * 4);
 
         try {
@@ -40,7 +39,7 @@ public sealed class SimpleProcess :
             }
 
             // ISSUE: https://github.com/dotnet/runtime/issues/28583
-            lastWrittenBytesCountTask = await Task.WhenAny(
+            var lastWrittenBytesCountTask = await Task.WhenAny(
                     source.Stream.ReadAsync(memoryOwner.Memory, cancellationToken).AsTask(),
                     cancellableTask)
                 .ConfigureAwait(false);
@@ -55,6 +54,7 @@ public sealed class SimpleProcess :
         } catch (OperationCanceledException error) when (error.CancellationToken.Equals(cancellationToken)) {
             ; // Ignore on purpose
         } finally {
+            _ = cancellableTaskSource.TrySetResult(default);
             writeNextBytes(EOF.Memory.Span);
         }
     }
@@ -105,7 +105,13 @@ public sealed class SimpleProcess :
     public CancellationToken Exited { get; }
 
     /// <inheritdoc/>
-    public bool IsExited { get; private set; }
+    public bool IsExited {
+        get => _isExited;
+        private set => _isExited = value;
+    }
+
+    /// <inheritdoc/>
+    public bool IsCompleted => IsExited || IsCancelled;
 
     /// <inheritdoc/>
     public bool IsDisposed => _isDisposed == 1;
@@ -121,6 +127,7 @@ public sealed class SimpleProcess :
     private readonly object _startProcessLock = new();
     private int? _exitCode;
     private int _isDisposed;
+    private volatile bool _isExited;
 
     /// <summary>
     /// Creates an instance of this type.
@@ -258,11 +265,11 @@ public sealed class SimpleProcess :
              * 2. We must perform the read tasks in the thread pool synchronization context, otherwise we face deadlocks when synchronously waiting for them */
 
             _readOutputTask = OutputWriter is not null
-                ? Task.Run(async () => await ReadStreamAsync(new NamedStream(process.StandardOutput.BaseStream, "output"), OutputWriter, Cancelled).ConfigureAwait(false))
+                ? Task.Run(async () => await ReadStreamAsync(new StreamTuple(process.StandardOutput.BaseStream, "output"), OutputWriter, Cancelled).ConfigureAwait(false))
                 : Task.CompletedTask;
 
             _readErrorTask = ErrorWriter is not null
-                ? Task.Run(async () => await ReadStreamAsync(new NamedStream(process.StandardError.BaseStream, "error"), ErrorWriter, Cancelled).ConfigureAwait(false))
+                ? Task.Run(async () => await ReadStreamAsync(new StreamTuple(process.StandardError.BaseStream, "error"), ErrorWriter, Cancelled).ConfigureAwait(false))
                 : Task.CompletedTask;
         }
     }
@@ -301,43 +308,11 @@ public sealed class SimpleProcess :
         }
 
         lock (_processEndingLock) {
-            if (IsCancelled) {
+            if (IsCompleted) {
                 return;
             }
 
-            _processCancellationTokenSource.Cancel();
-        }
-    }
-
-    /// <inheritdoc/>
-    public void CancelAfter(int delayInMilliseconds)
-    {
-        if (IsDisposed) {
-            return;
-        }
-
-        lock (_processEndingLock) {
-            if (IsCancelled) {
-                return;
-            }
-
-            _processCancellationTokenSource.CancelAfter(delayInMilliseconds);
-        }
-    }
-
-    /// <inheritdoc/>
-    public void CancelAfter(TimeSpan delay)
-    {
-        if (IsDisposed) {
-            return;
-        }
-
-        lock (_processEndingLock) {
-            if (IsCancelled) {
-                return;
-            }
-
-            _processCancellationTokenSource.CancelAfter(delay);
+            _processCancellationTokenSource.TryCancel();
         }
     }
 
@@ -535,18 +510,14 @@ public sealed class SimpleProcess :
             return;
         }
 
+        _timer?.Dispose();
+
         // Cancels all running operations
         Cancel();
 
         _process?.Dispose();
         _processStartedTokenSource.Dispose();
-
-        // It can happen, that someone is in Cancel()
-        lock (_processEndingLock) {
-            if (!IsExited)
-                _processCancellationTokenSource.Dispose();
-        }
-
+        _processCancellationTokenSource.Dispose();
         _processExitedTokenSource.Dispose();
     }
 
@@ -557,5 +528,5 @@ public sealed class SimpleProcess :
         GC.SuppressFinalize(this);
     }
 
-    private record NamedStream(Stream Stream, string Name);
+    private record StreamTuple(Stream Stream, string Name);
 }

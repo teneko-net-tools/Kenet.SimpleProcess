@@ -8,22 +8,9 @@ namespace Kenet.SimpleProcess;
 
 internal static partial class ProcessExtensions
 {
-    public static Task WaitForExitAsync(this Process process, CancellationToken cancellationToken)
-    {
-#if NET5_0_OR_GREATER
-        return process.WaitForExitAsync(cancellationToken);
-#else
-        return process.WaitForExitAsyncFallback(cancellationToken);
-#endif
-    }
-
 #if !NET5_0_OR_GREATER
-    public static async Task WaitForExitAsyncFallback(this Process process, CancellationToken cancellationToken)
+    private static async Task WaitForExitAsyncFallback(this Process process, CancellationToken cancellationToken)
     {
-        if (!process.HasExited) {
-            cancellationToken.ThrowIfCancellationRequested();
-        }
-
         try {
             process.EnableRaisingEvents = true;
         } catch (InvalidOperationException) {
@@ -36,10 +23,12 @@ internal static partial class ProcessExtensions
 
         var exitTaskSource = new TaskCompletionSource<object?>();
 
-        void OnExited(object? sender, EventArgs args)
-        {
+        using var cancelExitTask = cancellationToken.Register(
+            () => exitTaskSource.TrySetException(new OperationCanceledException("The operation to wait asynchronously for the process exit has been cancelled", cancellationToken)),
+            useSynchronizationContext: false);
+
+        void OnExited(object? sender, EventArgs args) =>
             exitTaskSource.TrySetResult(null);
-        }
 
         process.Exited += OnExited;
 
@@ -48,10 +37,19 @@ internal static partial class ProcessExtensions
                 return;
             }
 
-            await exitTaskSource.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+            await exitTaskSource.Task.ConfigureAwait(false);
         } finally {
             process.Exited -= OnExited;
         }
     }
 #endif
+
+    public static Task WaitForExitAsync(this Process process, CancellationToken cancellationToken)
+    {
+#if NET5_0_OR_GREATER
+        return process.WaitForExitAsync(cancellationToken);
+#else
+        return process.WaitForExitAsyncFallback(cancellationToken);
+#endif
+    }
 }
