@@ -182,7 +182,10 @@ public sealed class ProcessExecutor :
             var linkedCancellationToken = cancellationTokenSource.Token;
 
             try {
-                _ = linkedCancellationToken.Register(() => waitForExecution.TrySetException(new OperationCanceledException("The line-by-line read operation has been canceled", linkedCancellationToken)), useSynchronizationContext: false);
+                _ = linkedCancellationToken.Register(
+                    () => waitForExecution.TrySetException(new OperationCanceledException("The line-by-line read operation has been canceled", linkedCancellationToken)),
+                    useSynchronizationContext: false);
+
                 var execution = await waitForExecution.Task.ConfigureAwait(false);
                 using var cancelOnProcessCancellation = execution.Cancelled.Register(cancellationTokenSource.Cancel, useSynchronizationContext: false);
 

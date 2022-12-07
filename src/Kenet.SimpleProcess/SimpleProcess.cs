@@ -24,7 +24,11 @@ public sealed class SimpleProcess :
         await Task.Yield(); // No ConfigureAwait(bool) available
         var cancellableTaskSource = new TaskCompletionSource<int>();
         var cancellableTask = cancellableTaskSource.Task;
-        using var cancelTaskSource = cancellationToken.Register(() => cancellableTaskSource.SetException(new OperationCanceledException($"Reading the stream (\"{source.Name}\") has been cancelled", cancellationToken)));
+
+        using var cancelTaskSource = cancellationToken.Register(
+            () => cancellableTaskSource.SetException(new OperationCanceledException($"Reading the stream (\"{source.Name}\") has been cancelled", cancellationToken)),
+            useSynchronizationContext: false);
+
         Task<int>? lastWrittenBytesCountTask = null;
         using var memoryOwner = MemoryPool<byte>.Shared.Rent(1024 * 4);
 
@@ -413,7 +417,10 @@ public sealed class SimpleProcess :
                 }
             } else {
                 var cancellationTaskSource = new TaskCompletionSource<object>();
-                using var cancelTaskSource = newCancellationToken.Register(() => cancellationTaskSource.SetException(new OperationCanceledException("The async task waiting for completion has been cancelled", newCancellationToken)));
+
+                using var cancelTaskSource = newCancellationToken.Register(
+                    () => cancellationTaskSource.SetException(new OperationCanceledException("The async task waiting for completion has been cancelled", newCancellationToken)),
+                    useSynchronizationContext: false);
 
                 var whenAllTask = Task.WhenAll(
                     process.WaitForExitAsync(newCancellationToken),
