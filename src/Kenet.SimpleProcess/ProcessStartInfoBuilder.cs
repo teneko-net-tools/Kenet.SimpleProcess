@@ -25,7 +25,7 @@ public class ProcessStartInfoBuilder
     /// <param name="escapedArguments"></param>
     /// <remarks>
     /// <paramref name="escapedArguments"/> must be properly escaped for the intended OS plattform.
-    /// Please consider to use <see cref="ProcessStartInfoBuilderExtensions.WithOSIndependentArguments(ProcessStartInfoBuilder, string[])"/>, which handles the argument escaping for you.
+    /// Please consider to use <see cref="ProcessStartInfoBuilderExtensions.PasteArguments(ProcessStartInfoBuilder, string[])"/>, which handles the argument escaping for you.
     /// </remarks>
     public ProcessStartInfoBuilder WithArguments(string escapedArguments)
     {

@@ -25,14 +25,14 @@ public static class ProcessStartInfoBuilderExtensions
         startInfoBuilder.Build().ToDefaultExecutorBuilder();
 
     /// <summary>
-    /// Sets the arguments and escapes them depending on running OS plattform.
+    /// Sets the arguments and escapes them correctly depending on running operating system.
     /// </summary>
     /// <param name="builder"></param>
     /// <param name="unescapedArguments"></param>
-    public static ProcessStartInfoBuilder WithOSIndependentArguments(this ProcessStartInfoBuilder builder, IEnumerable<string> unescapedArguments) =>
+    public static ProcessStartInfoBuilder PasteArguments(this ProcessStartInfoBuilder builder, IEnumerable<string> unescapedArguments) =>
         builder.WithArguments(SimpleProcessStartInfo.EscapeArguments(unescapedArguments));
 
-    /// <inheritdoc cref="WithOSIndependentArguments(ProcessStartInfoBuilder, IEnumerable{string})"/>    
-    public static ProcessStartInfoBuilder WithOSIndependentArguments(this ProcessStartInfoBuilder builder, params string[] unescapedArguments) =>
-        builder.WithOSIndependentArguments((IEnumerable<string>)unescapedArguments);
+    /// <inheritdoc cref="PasteArguments(ProcessStartInfoBuilder, IEnumerable{string})"/>    
+    public static ProcessStartInfoBuilder PasteArguments(this ProcessStartInfoBuilder builder, params string[] unescapedArguments) =>
+        builder.PasteArguments((IEnumerable<string>)unescapedArguments);
 }

@@ -10,6 +10,12 @@ public static partial class ProcessExecutorBuilderGenericExtensions
         return mutator;
     }
 
+    /// <summary>
+    /// Sets a exit code validator, that only accepts <paramref name="validExitCode"/> as valid exit code.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="mutator"></param>
+    /// <param name="validExitCode"></param>
     public static T WithExitCode<T>(this T mutator, int validExitCode)
         where T : IProcessExecutorMutator
     {
@@ -18,6 +24,12 @@ public static partial class ProcessExecutorBuilderGenericExtensions
         return mutator;
     }
 
+    /// <summary>
+    /// Sets a exit code validator, that only accepts <paramref name="validExitCodes"/> as valid exit codes.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="mutator"></param>
+    /// <param name="validExitCodes"></param>
     public static T WithExitCode<T>(this T mutator, params int[] validExitCodes)
         where T : IProcessExecutorMutator
     {

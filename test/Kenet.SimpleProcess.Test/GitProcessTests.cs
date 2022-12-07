@@ -9,7 +9,7 @@ public class GitProcessTests
         yield return new object[]
         {
             new ProcessStartInfoBuilder("git")
-            .WithOSIndependentArguments("rev-parse", "--absolute-git-dir")
+            .PasteArguments("rev-parse", "--absolute-git-dir")
             .WithWorkingDirectory(AppContext.BaseDirectory)
             .ToDefaultExecutorBuilder()
         };
@@ -22,7 +22,7 @@ public class GitProcessTests
         using var boundary = new ProcessBoundary();
 
         _ = builder
-            .WriteToBuffer(b => b.AddOutputWriter, out var buffer, boundary)
+            .WriteToBufferReader(b => b.AddOutputWriter, out var buffer, boundary)
             .RunToCompletion();
 
         buffer.WrittenCount.Should().NotBe(0);
@@ -35,7 +35,7 @@ public class GitProcessTests
         using var boundary = new ProcessBoundary();
 
         _ = await builder
-            .WriteToBuffer(b => b.AddOutputWriter, out var buffer, boundary)
+            .WriteToBufferReader(b => b.AddOutputWriter, out var buffer, boundary)
             .RunToCompletionAsync();
 
         buffer.WrittenCount.Should().NotBe(0);

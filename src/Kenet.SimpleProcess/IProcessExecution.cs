@@ -3,6 +3,6 @@
 /// <summary>
 /// Represents a synchronous process execution.
 /// </summary>
-public interface IProcessExecution : IExecutingProcess, ICompletableProcessExecution, IDisposableProcess
+public interface IProcessExecution : IExecutingProcess, ICompletableProcess, IDisposableProcess
 {
 }

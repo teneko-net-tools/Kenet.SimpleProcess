@@ -11,13 +11,12 @@ public static partial class ProcessExecutorBuilderGenericExtensions
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="mutator"></param>
-    /// <param name="readFrom"></param>
+    /// <param name="writeToHandlerProvider"></param>
     /// <param name="bufferReader"></param>
     /// <param name="boundary"></param>
-    /// <returns></returns>
-    public static T WriteToBuffer<T>(
+    public static T WriteToBufferReader<T>(
         this T mutator,
-        Func<T, Func<WriteHandler, object>> readFrom,
+        Func<T, Action<WriteHandler>> writeToHandlerProvider,
         out BufferReader<byte> bufferReader,
         ProcessBoundary boundary)
         where T : IProcessExecutorMutator
@@ -25,7 +24,16 @@ public static partial class ProcessExecutorBuilderGenericExtensions
         var buffer = new ArrayPoolBufferWriter<byte>();
         bufferReader = new BufferReader<byte>(buffer);
         boundary.Associate(buffer);
-        readFrom(mutator)(buffer.Write);
+        writeToHandlerProvider(mutator)(buffer.Write);
         return mutator;
     }
+
+    /// <inheritdoc cref="WriteToBufferReader{T}(T, Func{T, Action{WriteHandler}}, out BufferReader{byte}, ProcessBoundary)"/>
+    public static T WriteToBufferReader<T>(
+        this T mutator,
+        Func<T, Func<WriteHandler, object>> writeToHandlerProvider,
+        out BufferReader<byte> bufferReader,
+        ProcessBoundary boundary)
+        where T : IProcessExecutorMutator =>
+        WriteToBufferReader(mutator, mutator => writeTo => writeToHandlerProvider(mutator)(writeTo), out bufferReader, boundary);
 }

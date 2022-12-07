@@ -118,7 +118,7 @@ public sealed class ProcessExecutor :
     /// <summary>
     /// Writes internally to a stream that gets asynchronously redirected to <paramref name="asyncLines"/>.
     /// </summary>
-    /// <param name="readFrom"></param>
+    /// <param name="writeToHandlerProvider"></param>
     /// <param name="asyncLines">
     /// Represents a pipeline that asynchronously waits for incoming bytes, decodes them on-the-fly and returns lines as soon as they are appearing.
     /// Can throw <see cref="InvalidOperationException"/>.
@@ -128,14 +128,14 @@ public sealed class ProcessExecutor :
     /// If the token gets cancellation requested, then the current or next cancellable operation will be cancelled.
     /// </param>
     /// <inheritdoc cref="WithExitCode(Func{int, bool})" path="/*[position()>last()-2]"/>
-    public ProcessExecutor WriteToAsyncLines(Func<ProcessExecutor, Func<WriteHandler, object>> readFrom, out IAsyncEnumerable<string> asyncLines, Encoding encoding, CancellationToken cancellationToken)
+    public ProcessExecutor WriteToAsyncLines(Func<ProcessExecutor, Func<WriteHandler, object>> writeToHandlerProvider, out IAsyncEnumerable<string> asyncLines, Encoding encoding, CancellationToken cancellationToken)
     {
         var readCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var isReadCancellationTokenSourceDisposed = false;
         var readCancellationToken = readCancellationTokenSource.Token;
         var lineStream = new AsyncLineStream();
 
-        _ = readFrom(this)(bytes => {
+        _ = writeToHandlerProvider(this)(bytes => {
             if (lineStream.IsCompleted || lineStream.IsDisposed) {
                 return;
             }
@@ -179,7 +179,7 @@ public sealed class ProcessExecutor :
             var linkedCancellationToken = cancellationTokenSource.Token;
 
             try {
-                _ = linkedCancellationToken.Register(() => waitForExecution.TrySetException(new OperationCanceledException(linkedCancellationToken)), useSynchronizationContext: false);
+                _ = linkedCancellationToken.Register(() => waitForExecution.TrySetException(new OperationCanceledException("The line-by-line read operation has been canceled", linkedCancellationToken)), useSynchronizationContext: false);
                 var execution = await waitForExecution.Task.ConfigureAwait(false);
                 using var cancelOnProcessCancellation = execution.Cancelled.Register(cancellationTokenSource.Cancel, useSynchronizationContext: false);
 
@@ -211,16 +211,16 @@ public sealed class ProcessExecutor :
     }
 
     /// <inheritdoc cref="WriteToAsyncLines(Func{ProcessExecutor, Func{WriteHandler, object}}, out IAsyncEnumerable{string}, Encoding, CancellationToken)"/>
-    public ProcessExecutor WriteToAsyncLines(Func<ProcessExecutor, Func<WriteHandler, object>> readFrom, out IAsyncEnumerable<string> asyncLines, Encoding encoding) =>
-        WriteToAsyncLines(readFrom, out asyncLines, encoding, CancellationToken.None);
+    public ProcessExecutor WriteToAsyncLines(Func<ProcessExecutor, Func<WriteHandler, object>> writeToHandlerProvider, out IAsyncEnumerable<string> asyncLines, Encoding encoding) =>
+        WriteToAsyncLines(writeToHandlerProvider, out asyncLines, encoding, CancellationToken.None);
 
     /// <inheritdoc cref="WriteToAsyncLines(Func{ProcessExecutor, Func{WriteHandler, object}}, out IAsyncEnumerable{string}, Encoding, CancellationToken)"/>
-    public ProcessExecutor WriteToAsyncLines(Func<ProcessExecutor, Func<WriteHandler, object>> readFrom, out IAsyncEnumerable<string> asyncLines) =>
-        WriteToAsyncLines(readFrom, out asyncLines, Encoding.UTF8, CancellationToken.None);
+    public ProcessExecutor WriteToAsyncLines(Func<ProcessExecutor, Func<WriteHandler, object>> writeToHandlerProvider, out IAsyncEnumerable<string> asyncLines) =>
+        WriteToAsyncLines(writeToHandlerProvider, out asyncLines, Encoding.UTF8, CancellationToken.None);
 
     /// <inheritdoc cref="WriteToAsyncLines(Func{ProcessExecutor, Func{WriteHandler, object}}, out IAsyncEnumerable{string}, Encoding, CancellationToken)"/>
-    public ProcessExecutor WriteToAsyncLines(Func<ProcessExecutor, Func<WriteHandler, object>> readFrom, out IAsyncEnumerable<string> asyncLines, CancellationToken cancellationToken) =>
-        WriteToAsyncLines(readFrom, out asyncLines, Encoding.UTF8, cancellationToken);
+    public ProcessExecutor WriteToAsyncLines(Func<ProcessExecutor, Func<WriteHandler, object>> writeToHandlerProvider, out IAsyncEnumerable<string> asyncLines, CancellationToken cancellationToken) =>
+        WriteToAsyncLines(writeToHandlerProvider, out asyncLines, Encoding.UTF8, cancellationToken);
 
     /// <inheritdoc cref="SimpleProcess.Run()"/>
     public ProcessExecution Run()

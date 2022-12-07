@@ -3,6 +3,6 @@
 /// <summary>
 /// Represents an asynchronous process execution.
 /// </summary>
-public interface IAsyncProcessExecution : IExecutingProcess, IAsyncCompletableProcessExecution, IDisposableProcess
+public interface IAsyncProcessExecution : IExecutingProcess, IAsyncCompletableProcess, IDisposableProcess
 {
 }

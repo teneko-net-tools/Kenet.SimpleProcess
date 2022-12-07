@@ -14,17 +14,17 @@ public sealed class SimpleProcess :
     IRunnable<IProcessExecution>,
     IRunnable<IAsyncProcessExecution>
 {
-    private static readonly TimeSpan _defaultKillTreeTimeout = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan s_defaultKillTreeTimeout = TimeSpan.FromSeconds(10);
 
     private static async Task ReadStreamAsync(
-        Stream source,
+        NamedStream source,
         WriteHandler writeNextBytes,
         CancellationToken cancellationToken)
     {
         await Task.Yield(); // No ConfigureAwait(bool) available
         var cancellableTaskSource = new TaskCompletionSource<int>();
         var cancellableTask = cancellableTaskSource.Task;
-        using var cancelTaskSource = cancellationToken.Register(() => cancellableTaskSource.SetException(new OperationCanceledException(cancellationToken)));
+        using var cancelTaskSource = cancellationToken.Register(() => cancellableTaskSource.SetException(new OperationCanceledException($"Reading the stream (\"{source.Name}\") has been cancelled", cancellationToken)));
         Task<int>? lastWrittenBytesCountTask = null;
         using var memoryOwner = MemoryPool<byte>.Shared.Rent(1024 * 4);
 
@@ -37,7 +37,7 @@ public sealed class SimpleProcess :
 
             // ISSUE: https://github.com/dotnet/runtime/issues/28583
             lastWrittenBytesCountTask = await Task.WhenAny(
-                    source.ReadAsync(memoryOwner.Memory, cancellationToken).AsTask(),
+                    source.Stream.ReadAsync(memoryOwner.Memory, cancellationToken).AsTask(),
                     cancellableTask)
                 .ConfigureAwait(false);
 
@@ -254,11 +254,11 @@ public sealed class SimpleProcess :
              * 2. We must perform the read tasks in the thread pool synchronization context, otherwise we face deadlocks when synchronously waiting for them */
 
             _readOutputTask = OutputWriter is not null
-                ? Task.Run(async () => await ReadStreamAsync(process.StandardOutput.BaseStream, OutputWriter, Cancelled).ConfigureAwait(false))
+                ? Task.Run(async () => await ReadStreamAsync(new NamedStream(process.StandardOutput.BaseStream, "output"), OutputWriter, Cancelled).ConfigureAwait(false))
                 : Task.CompletedTask;
 
             _readErrorTask = ErrorWriter is not null
-                ? Task.Run(async () => await ReadStreamAsync(process.StandardError.BaseStream, ErrorWriter, Cancelled).ConfigureAwait(false))
+                ? Task.Run(async () => await ReadStreamAsync(new NamedStream(process.StandardError.BaseStream, "error"), ErrorWriter, Cancelled).ConfigureAwait(false))
                 : Task.CompletedTask;
         }
     }
@@ -413,7 +413,7 @@ public sealed class SimpleProcess :
                 }
             } else {
                 var cancellationTaskSource = new TaskCompletionSource<object>();
-                using var cancelTaskSource = newCancellationToken.Register(() => cancellationTaskSource.SetException(new OperationCanceledException(newCancellationToken)));
+                using var cancelTaskSource = newCancellationToken.Register(() => cancellationTaskSource.SetException(new OperationCanceledException("The async task waiting for completion has been cancelled", newCancellationToken)));
 
                 var whenAllTask = Task.WhenAll(
                     process.WaitForExitAsync(newCancellationToken),
@@ -459,15 +459,15 @@ public sealed class SimpleProcess :
     public int RunToCompletion(CancellationToken cancellationToken, ProcessCompletionOptions completionOptions) =>
         RunToCompletionAsync(synchronously: true, cancellationToken, completionOptions).GetAwaiter().GetResult();
 
-    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletion(ICompletableProcessExecution, CancellationToken)"/>
+    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletion(ICompletableProcess, CancellationToken)"/>
     public int RunToCompletion(CancellationToken cancellationToken) =>
         RunToCompletion(cancellationToken, ProcessCompletionOptions.None);
 
-    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletion(ICompletableProcessExecution, CancellationToken)"/>
+    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletion(ICompletableProcess, CancellationToken)"/>
     public int RunToCompletion() =>
         RunToCompletion(CancellationToken.None, ProcessCompletionOptions.None);
 
-    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletion(ICompletableProcessExecution, ProcessCompletionOptions)"/>
+    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletion(ICompletableProcess, ProcessCompletionOptions)"/>
     public int RunToCompletion(ProcessCompletionOptions completionOptions) =>
         RunToCompletion(CancellationToken.None, completionOptions);
 
@@ -475,15 +475,15 @@ public sealed class SimpleProcess :
     public Task<int> RunToCompletionAsync(CancellationToken cancellationToken, ProcessCompletionOptions completionOptions) =>
         RunToCompletionAsync(synchronously: false, cancellationToken, completionOptions);
 
-    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletionAsync(IAsyncCompletableProcessExecution, CancellationToken)"/>
+    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletionAsync(IAsyncCompletableProcess, CancellationToken)"/>
     public Task<int> RunToCompletionAsync(CancellationToken cancellationToken) =>
         RunToCompletionAsync(cancellationToken, ProcessCompletionOptions.None);
 
-    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletionAsync(IAsyncCompletableProcessExecution, CancellationToken)"/>
+    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletionAsync(IAsyncCompletableProcess, CancellationToken)"/>
     public Task<int> RunToCompletionAsync() =>
         RunToCompletionAsync(CancellationToken.None, ProcessCompletionOptions.None);
 
-    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletionAsync(IAsyncCompletableProcessExecution, ProcessCompletionOptions)"/>
+    /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletionAsync(IAsyncCompletableProcess, ProcessCompletionOptions)"/>
     public Task<int> RunToCompletionAsync(ProcessCompletionOptions completionOptions) =>
         RunToCompletionAsync(CancellationToken.None, completionOptions);
 
@@ -514,7 +514,7 @@ public sealed class SimpleProcess :
         _process.Kill(entireProcessTree);
 #else
         // https://unix.stackexchange.com/a/124148
-        _process.KillTree(_defaultKillTreeTimeout);
+        _process.KillTree(s_defaultKillTreeTimeout);
 #endif
     }
 
@@ -549,4 +549,6 @@ public sealed class SimpleProcess :
         Dispose(disposing: true);
         GC.SuppressFinalize(this);
     }
+
+    private record NamedStream(Stream Stream, string Name);
 }

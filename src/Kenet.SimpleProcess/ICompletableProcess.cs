@@ -1,6 +1,6 @@
 ﻿namespace Kenet.SimpleProcess;
 
-public interface ICompletableProcessExecution
+public interface ICompletableProcess
 {
     /// <summary>
     /// Instructs the process to wait for the associated process to exit.

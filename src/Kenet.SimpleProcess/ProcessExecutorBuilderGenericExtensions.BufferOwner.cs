@@ -10,38 +10,26 @@ public static partial class ProcessExecutorBuilderGenericExtensions
     /// Writes to <paramref name="bufferOwner"/>. The buffer MUST be disposed on your own!
     /// </summary>
     /// <param name="mutator"></param>
-    /// <param name="readFrom"></param>
+    /// <param name="writeToHandlerProvider"></param>
     /// <param name="bufferOwner"></param>
     /// <typeparam name="T"></typeparam>
-    /// <returns></returns>
-    public static T WriteToBuffer<T>(
+    public static T WriteToBufferOwner<T>(
         this T mutator,
-        Func<T, Action<WriteHandler>> readFrom,
+        Func<T, Action<WriteHandler>> writeToHandlerProvider,
         out BufferOwner<byte> bufferOwner)
         where T : IProcessExecutorMutator
     {
         var buffer = new ArrayPoolBufferWriter<byte>();
         bufferOwner = new BufferOwner<byte>(buffer);
-        readFrom(mutator)(buffer.Write);
+        writeToHandlerProvider(mutator)(buffer.Write);
         return mutator;
     }
 
-    /// <summary>
-    /// Writes to <paramref name="bufferOwner" />. The buffer MUST be disposed on your own!
-    /// </summary>
-    /// <param name="mutator"></param>
-    /// <param name="readFrom"></param>
-    /// <param name="bufferOwner"></param>
-    /// <typeparam name="T"></typeparam>
-    /// <returns></returns>
-    public static T WriteToBuffer<T>(
+    /// <inheritdoc cref="WriteToBufferOwner{T}(T, Func{T, Action{WriteHandler}}, out BufferOwner{byte})"/>
+    public static T WriteToBufferOwner<T>(
         this T mutator,
-        Func<T, Func<WriteHandler, object>> readFrom,
+        Func<T, Func<WriteHandler, object>> writeToHandlerProvider,
         out BufferOwner<byte> bufferOwner)
-        where T : IProcessExecutorMutator
-    {
-        var writerHandler = readFrom(mutator);
-        void WriteHandler(WriteHandler bytes) => _ = writerHandler(bytes);
-        return WriteToBuffer(mutator, _ => WriteHandler, out bufferOwner);
-    }
+        where T : IProcessExecutorMutator =>
+        WriteToBufferOwner(mutator, mutator => writeTo => writeToHandlerProvider(mutator)(writeTo), out bufferOwner);
 }

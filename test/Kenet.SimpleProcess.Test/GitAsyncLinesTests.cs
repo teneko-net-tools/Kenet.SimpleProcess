@@ -5,7 +5,7 @@ namespace Kenet.SimpleProcess.Test
     public class GitAsyncLinesTests
     {
         private static SimpleProcessStartInfo CreateGitLogStartInfo(int numberOfCommits) => SimpleProcessStartInfo.NewBuilder("git")
-            .WithOSIndependentArguments("log", "--oneline", $"-{numberOfCommits}")
+            .PasteArguments("log", "--oneline", $"-{numberOfCommits}")
             .WithWorkingDirectory(AppContext.BaseDirectory)
             .Build();
 

@@ -3,8 +3,8 @@
 /// <summary>
 /// Represents an asynchronous process.
 /// </summary>
-public interface IAsyncCompletableProcessExecution
+public interface IAsyncCompletableProcess
 {
-    /// <inheritdoc cref="ICompletableProcessExecution.RunToCompletion(CancellationToken, ProcessCompletionOptions)"/>.
+    /// <inheritdoc cref="ICompletableProcess.RunToCompletion(CancellationToken, ProcessCompletionOptions)"/>.
     Task<int> RunToCompletionAsync(CancellationToken cancellationToken, ProcessCompletionOptions completionOptions);
 }
