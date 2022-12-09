@@ -1,5 +1,4 @@
-﻿using FluentAssertions;
-using Kenet.SimpleProcess.Pipelines;
+﻿using Kenet.SimpleProcess.Pipelines;
 
 namespace Kenet.SimpleProcess.Test.Pipelines
 {

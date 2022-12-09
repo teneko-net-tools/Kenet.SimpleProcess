@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel;
-using FluentAssertions;
 
 namespace Kenet.SimpleProcess.Test;
 

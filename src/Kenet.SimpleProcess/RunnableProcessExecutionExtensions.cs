@@ -6,7 +6,7 @@
 /// </summary>
 public static class RunnableProcessExecutionExtensions
 {
-    private static readonly ProcessCompletionOptions _fireAndForgetCompletionOptions =
+    private static readonly ProcessCompletionOptions s_fireAndForgetCompletionOptions =
         ProcessCompletionOptions.KillTreeOnCancellation;
 
     /// <inheritdoc cref="ICompletableProcess.RunToCompletion(CancellationToken, ProcessCompletionOptions)"/>
@@ -24,11 +24,11 @@ public static class RunnableProcessExecutionExtensions
     /// </summary>
     /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletion(ICompletableProcess, CancellationToken)"/>
     public static int RunToCompletion(this IRunnable<IProcessExecution> process, CancellationToken cancellationToken) =>
-         RunToCompletion(process, cancellationToken, _fireAndForgetCompletionOptions);
+         RunToCompletion(process, cancellationToken, s_fireAndForgetCompletionOptions);
 
     /// <inheritdoc cref="RunToCompletion(IRunnable{IProcessExecution}, CancellationToken)"/>
     public static int RunToCompletion(this IRunnable<IProcessExecution> process) =>
-         RunToCompletion(process, CancellationToken.None, _fireAndForgetCompletionOptions);
+         RunToCompletion(process, CancellationToken.None, s_fireAndForgetCompletionOptions);
 
     /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletion(ICompletableProcess, ProcessCompletionOptions)"/>
     public static int RunToCompletion(this IRunnable<IProcessExecution> process, ProcessCompletionOptions completionOptions) =>
@@ -49,11 +49,11 @@ public static class RunnableProcessExecutionExtensions
     /// </summary>
     /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletionAsync(IAsyncCompletableProcess, CancellationToken)"/>
     public static Task<int> RunToCompletionAsync(this IRunnable<IAsyncProcessExecution> process, CancellationToken cancellationToken) =>
-        RunToCompletionAsync(process, cancellationToken, _fireAndForgetCompletionOptions);
+        RunToCompletionAsync(process, cancellationToken, s_fireAndForgetCompletionOptions);
 
     /// <inheritdoc cref="RunToCompletionAsync(IRunnable{IAsyncProcessExecution}, CancellationToken)"/>
     public static Task<int> RunToCompletionAsync(this IRunnable<IAsyncProcessExecution> process) =>
-        RunToCompletionAsync(process, CancellationToken.None, _fireAndForgetCompletionOptions);
+        RunToCompletionAsync(process, CancellationToken.None, s_fireAndForgetCompletionOptions);
 
     /// <inheritdoc cref="ProcessExecutionExtensions.RunToCompletionAsync(IAsyncCompletableProcess, ProcessCompletionOptions)"/>
     public static Task<int> RunToCompletionAsync(this IRunnable<IAsyncProcessExecution> process, ProcessCompletionOptions completionOptions) =>

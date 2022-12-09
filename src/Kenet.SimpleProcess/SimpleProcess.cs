@@ -18,7 +18,7 @@ public sealed partial class SimpleProcess :
     private static readonly TimeSpan s_defaultKillTreeTimeout = TimeSpan.FromSeconds(10);
 
     private static async Task ReadStreamAsync(
-        StreamTuple source,
+        Stream source,
         WriteHandler writeNextBytes,
         CancellationToken cancellationToken)
     {
@@ -27,21 +27,20 @@ public sealed partial class SimpleProcess :
         var cancellableTask = cancellableTaskSource.Task;
 
         using var cancelTaskSource = cancellationToken.Register(
-            () => _ = cancellableTaskSource.TrySetException(new OperationCanceledException($"Reading the stream (\"{source.Name}\") has been cancelled", cancellationToken)),
+            () => _ = cancellableTaskSource.TrySetException(new OperationCanceledException(cancellationToken)),
             useSynchronizationContext: false);
 
         using var memoryOwner = MemoryPool<byte>.Shared.Rent(1024 * 4);
 
+        @continue:
         try {
-            tryReadNext:
-
             if (cancellationToken.IsCancellationRequested) {
-                return;
+                goto @break;
             }
 
             // ISSUE: https://github.com/dotnet/runtime/issues/28583
             var lastWrittenBytesCountTask = await Task.WhenAny(
-                    source.Stream.ReadAsync(memoryOwner.Memory, cancellationToken).AsTask(),
+                    source.ReadAsync(memoryOwner.Memory, cancellationToken).AsTask(),
                     cancellableTask)
                 .ConfigureAwait(false);
 
@@ -50,14 +49,20 @@ public sealed partial class SimpleProcess :
 
             if (lastWrittenBytesCount != 0) {
                 writeNextBytes(memoryOwner.Memory.Span[..lastWrittenBytesCount]);
-                goto tryReadNext;
+                goto @continue;
             }
         } catch (OperationCanceledException error) when (error.CancellationToken.Equals(cancellationToken)) {
-            ; // Ignore on purpose
-        } finally {
-            _ = cancellableTaskSource.TrySetResult(default);
-            writeNextBytes(EOF.Memory.Span);
+            // We cancelled the read task by us, so we ignore because the cancellation gets handled in RunToCompletion[Async] either way
+            goto @break;
+        } catch {
+            // We tried to write the bytes, but an exception, that does not originate from us, occurred, so we continue the reading
+            goto @continue;
         }
+
+        @break:
+        _ = cancellableTaskSource.TrySetResult(default);
+        // We always end with with an EOF, otherwise the consumers may get irritated
+        writeNextBytes(EOF.Memory.Span);
     }
 
     /// <summary>
@@ -266,11 +271,11 @@ public sealed partial class SimpleProcess :
              * 2. We must perform the read tasks in the thread pool synchronization context, otherwise we face deadlocks when synchronously waiting for them */
 
             _readOutputTask = OutputWriter is not null
-                ? Task.Run(async () => await ReadStreamAsync(new StreamTuple(process.StandardOutput.BaseStream, "output"), OutputWriter, Cancelled).ConfigureAwait(false))
+                ? Task.Run(async () => await ReadStreamAsync(process.StandardOutput.BaseStream, OutputWriter, Cancelled).ConfigureAwait(false))
                 : Task.CompletedTask;
 
             _readErrorTask = ErrorWriter is not null
-                ? Task.Run(async () => await ReadStreamAsync(new StreamTuple(process.StandardError.BaseStream, "error"), ErrorWriter, Cancelled).ConfigureAwait(false))
+                ? Task.Run(async () => await ReadStreamAsync(process.StandardError.BaseStream, ErrorWriter, Cancelled).ConfigureAwait(false))
                 : Task.CompletedTask;
         }
     }
@@ -330,6 +335,7 @@ public sealed partial class SimpleProcess :
         CancellationToken cancellationToken,
         ProcessCompletionOptions completionOptions)
     {
+        var waitForExitOnly = completionOptions.HasFlag(ProcessCompletionOptions.WaitForExit);
         Run(out var process);
 
         CancellationTokenSource CreateCancellationTokenSource(out CancellationToken newCancellationToken)
@@ -347,102 +353,67 @@ public sealed partial class SimpleProcess :
         }
 
         using var cancellationTokenSource = CreateCancellationTokenSource(out var newCancellationToken);
+        var recordedException = default(Exception);
 
-        try {
-            /* We want to enable multiple calls to RunToCompletion[Async] e.g. to wait for exit after call to asynchronous Kill([bool]) */
+        if (synchronously) {
+            var promiseOfWaitForExit = Task.Run(async () => await process.WaitForExitAsync(newCancellationToken).ConfigureAwait(false));
 
-            // 1. If the read task has been completed, we should not await it again, as it could be fauled or canceled.
-            // [2. When the process has fallen into cancelling state, then on-going read should already have been canceled.]
-            // 3. If the user only wants to wait for the process exit, we ignore reader tasks, because they may get faulted or canceled.
-            Task PrepareReadTask(Task readTask) => readTask.IsCompleted || completionOptions.HasFlag(ProcessCompletionOptions.WaitForExit)
-                ? Task.CompletedTask
-                : readTask.ContinueWithCallbackOnFailure(cancellationTokenSource.TryCancel);
-
-            var readOutputTask = PrepareReadTask(_readOutputTask);
-            var readErrorTask = PrepareReadTask(_readErrorTask);
-
-            if (synchronously) {
-                // This produces potentially a never ending task, but should end if the process exits/got killed or is going to be disposed.
-                var waitForExitTask = Task.Run(process.WaitForExit, newCancellationToken);
-
-                // This makes the assumption, that every await uses ConfigureAwait(continueOnCapturedContext: false)
-                //
-                // We must pass cancellation token, otherwise all tasks are awaited.
-                var recordedException = default(Exception);
-
-                try {
-                    Task.WaitAll(
-                        new[] {
-                            waitForExitTask,
-                            readOutputTask,
-                            readErrorTask,
-                        },
-                        newCancellationToken);
-                } catch (AggregateException error) {
-                    // Let's unwrap the aggregated exception
-                    recordedException = error.InnerException;
-                } catch (Exception error) {
-                    recordedException = error;
-                }
-
-                // When the cancellation was not requested from the method-scoped cancellation token, then we can assume:
-                // 1. The process has fallen into cancelling state and the cancelled token turned cancellation requested.
-                // 2. This instance disposed and the [disposed token -> cancelled token] turned cancelled requested.
-                if (!cancellationToken.IsCancellationRequested) {
-                    try {
-                        Task.WaitAll(readOutputTask, readErrorTask);
-                    } catch (AggregateException) {
-                        ; // We ignore on purpose
-                    }
-                }
-
-                if (recordedException != null) {
-                    ExceptionDispatchInfo.Capture(recordedException).Throw();
-                }
-            } else {
-                var cancellationTaskSource = new TaskCompletionSource<object>();
-
-                using var cancelTaskSource = newCancellationToken.Register(
-                    () => cancellationTaskSource.SetException(new OperationCanceledException("The async task waiting for completion has been cancelled", newCancellationToken)),
-                    useSynchronizationContext: false);
-
-                var whenAllTask = Task.WhenAll(
-                    process.WaitForExitAsync(newCancellationToken),
-                    readOutputTask,
-                    readErrorTask);
-
-                // See above
-                var whenAnyTask = await Task.WhenAny(
-                        whenAllTask,
-                        cancellationTaskSource.Task)
-                    .ConfigureAwait(false);
-
-                // See above.
-                if (!cancellationToken.IsCancellationRequested) {
-                    // This will not throw in case of cancellation of any task
-                    await Task.WhenAll(readOutputTask, readErrorTask).ConfigureAwait(false);
-                }
-
-                whenAnyTask.GetAwaiter().GetResult();
+            try {
+                promiseOfWaitForExit.GetAwaiter().GetResult();
+            } catch (Exception error) {
+                recordedException = error;
             }
-
-            /* The process exited successfully */
-            _exitCode ??= process.ExitCode;
-            AnnounceProcessExit();
-        } catch (Exception error) {
-            if (completionOptions != ProcessCompletionOptions.None
-                && error is OperationCanceledException
-                && newCancellationToken.IsCancellationRequested) {
-                if (completionOptions.HasFlag(ProcessCompletionOptions.KillTreeOnCancellation)) {
-                    Kill(entireProcessTree: true);
-                } else if (completionOptions.HasFlag(ProcessCompletionOptions.KillOnCancellation)) {
-                    Kill();
-                }
+        } else {
+            try {
+                await process.WaitForExitAsync(newCancellationToken).ConfigureAwait(false);
+            } catch (Exception error) {
+                recordedException = error;
             }
-
-            throw;
         }
 
+        // If we are not only waiting for exit, then wait for reading tasks if
+        // 1. no exception was thrown, and we expect reading tasks to finish, or
+        // 2. the process cancelled and reading tasks are cancelling right now.
+        if (!waitForExitOnly && (recordedException == null || IsCancelled)) {
+            async ValueTask WaitForReadingTasks()
+            {
+                if (_readOutputTask.IsCompleted && _readErrorTask.IsCompleted) {
+                    return;
+                }
+
+                try {
+                    if (synchronously) {
+                        Task.WaitAll(_readOutputTask, _readErrorTask);
+                    } else {
+                        await Task.WhenAll(_readOutputTask, _readErrorTask).ConfigureAwait(false);
+                    }
+                } catch {
+                    // Reading tasks should not participate into an exception occurence
+                }
+            }
+
+            if (synchronously) {
+                WaitForReadingTasks().GetAwaiter().GetResult();
+            } else {
+                await WaitForReadingTasks().ConfigureAwait(false);
+            }
+        }
+
+        if (recordedException != null) {
+            if (recordedException is OperationCanceledException && newCancellationToken.IsCancellationRequested) {
+                if (completionOptions.HasFlag(ProcessCompletionOptions.KillTreeOnCancellation)) {
+                    KillProcess(entireProcessTree: true, keepKillingFromThrowing: true);
+                } else if (completionOptions.HasFlag(ProcessCompletionOptions.KillOnCancellation)) {
+                    KillProcess(entireProcessTree: false, keepKillingFromThrowing: true);
+                }
+            }
+
+            ExceptionDispatchInfo.Capture(recordedException).Throw();
+        }
+
+        /* The process exited successfully */
+        _exitCode ??= process.ExitCode;
+        AnnounceProcessExit();
         return _exitCode.Value;
     }
 
@@ -486,17 +457,7 @@ public sealed partial class SimpleProcess :
         }
     }
 
-    /// <inheritdoc/>
-    /// <exception cref="InvalidOperationException">The process have not been started yet.</exception>
-    public void Kill()
-    {
-        CheckProcessStarted();
-        _process.Kill();
-    }
-
-    /// <inheritdoc/>
-    /// <exception cref="InvalidOperationException">The process have not been started yet.</exception>
-    public void Kill(bool entireProcessTree)
+    private void KillProcess(bool entireProcessTree)
     {
         CheckProcessStarted();
 
@@ -508,6 +469,29 @@ public sealed partial class SimpleProcess :
         _process.KillTree(s_defaultKillTreeTimeout);
 #endif
     }
+
+    private void KillProcess(bool entireProcessTree, bool keepKillingFromThrowing)
+    {
+        if (keepKillingFromThrowing) {
+            try {
+                KillProcess(entireProcessTree);
+            } catch {
+                // Ignore on purpose
+            }
+        } else {
+            KillProcess(entireProcessTree);
+        }
+    }
+
+    /// <inheritdoc/>
+    /// <exception cref="InvalidOperationException">The process have not been started yet.</exception>
+    public void Kill(bool entireProcessTree) =>
+        KillProcess(entireProcessTree);
+
+    /// <inheritdoc/>
+    /// <exception cref="InvalidOperationException">The process have not been started yet.</exception>
+    public void Kill() =>
+        Kill(entireProcessTree: false);
 
     private void Dispose(bool disposing)
     {
@@ -536,6 +520,4 @@ public sealed partial class SimpleProcess :
         Dispose(disposing: true);
         GC.SuppressFinalize(this);
     }
-
-    private record StreamTuple(Stream Stream, string Name);
 }

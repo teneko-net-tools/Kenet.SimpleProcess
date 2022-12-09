@@ -1,11 +1,10 @@
-﻿using FluentAssertions;
-using Kenet.SimpleProcess.Test.Infrastructure;
-using static Kenet.SimpleProcess.Test.Infrastructure.SleepCommand;
+﻿using Kenet.SimpleProcess.Test.Infrastructure;
+using static Kenet.SimpleProcess.Test.Infrastructure.DummyCommand;
 
 namespace Kenet.SimpleProcess.Test
 {
     [Collection(KillingProcessesCollection.CollectionName)]
-    public class NeverEndingProcessAsyncLinesTests
+    public partial class AsyncLinesTests
     {
         [Fact]
         public async Task Awaiting_cancelled_async_lines_should_throw()

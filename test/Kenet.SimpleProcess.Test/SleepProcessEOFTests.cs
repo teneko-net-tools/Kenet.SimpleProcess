@@ -1,39 +1,20 @@
-﻿using System.Text;
-using FluentAssertions;
-using Kenet.SimpleProcess.Test.Infrastructure;
-using Xunit.Abstractions;
-using static Kenet.SimpleProcess.Test.Infrastructure.SleepCommand;
+﻿using Kenet.SimpleProcess.Test.Infrastructure;
+using static Kenet.SimpleProcess.Test.Infrastructure.DummyCommand;
 
 namespace Kenet.SimpleProcess.Test
 {
     [Collection(KillingProcessesCollection.CollectionName)]
-    public class NeverEndingProcessTests
+    public class SleepProcessEOFTests
     {
-        public NeverEndingProcessTests(ITestOutputHelper output)
-        {
-            var converter = new Converter(output);
-            Console.SetOut(converter);
-        }
-
-        private class Converter : TextWriter
-        {
-            private readonly ITestOutputHelper _output;
-            public Converter(ITestOutputHelper output) => _output = output;
-            public override Encoding Encoding => Encoding.UTF8;
-            public override void WriteLine(string? message) => _output.WriteLine(message);
-            public override void WriteLine(string format, params object?[] args) => _output.WriteLine(format, args);
-            public override void Write(char value) => throw new NotSupportedException("This text writer only supports WriteLine(string) and WriteLine(string, params object[]).");
-        }
-
         [Theory]
-        //[InlineData(new object[] { true, 0, ProcessCompletionOptions.None })]
-        //[InlineData(new object[] { false, 0, ProcessCompletionOptions.None })]
-        //[InlineData(new object[] { true, 30, ProcessCompletionOptions.None })]
-        //[InlineData(new object[] { false, 30, ProcessCompletionOptions.None })]
+        [InlineData(new object[] { true, 0, ProcessCompletionOptions.None })]
+        [InlineData(new object[] { false, 0, ProcessCompletionOptions.None })]
+        [InlineData(new object[] { true, 30, ProcessCompletionOptions.None })]
+        [InlineData(new object[] { false, 30, ProcessCompletionOptions.None })]
         [InlineData(new object[] { true, 0, ProcessCompletionOptions.KillOnCancellation })]
-        //[InlineData(new object[] { false, 0, ProcessCompletionOptions.KillOnCancellation })]
-        //[InlineData(new object[] { true, 30, ProcessCompletionOptions.KillTreeOnCancellation })]
-        //[InlineData(new object[] { false, 30, ProcessCompletionOptions.KillTreeOnCancellation })]
+        [InlineData(new object[] { false, 0, ProcessCompletionOptions.KillOnCancellation })]
+        [InlineData(new object[] { true, 30, ProcessCompletionOptions.KillTreeOnCancellation })]
+        [InlineData(new object[] { false, 30, ProcessCompletionOptions.KillTreeOnCancellation })]
         public async Task Process_writes_eof_when_exiting_after_time(bool synchronously, int cancelledAfterMilliseconds, ProcessCompletionOptions completionOptions)
         {
             CancellationTokenSource? cancellationTokenSource;
@@ -62,16 +43,18 @@ namespace Kenet.SimpleProcess.Test
 
                 receivedEOF.Should().BeTrue();
 
-                if (!completionOptions.HasFlag(ProcessCompletionOptions.KillOnCancellation)) {
-                    sleep.IsExited.Should().BeFalse();
-                } else {
+                if (completionOptions.HasFlag(ProcessCompletionOptions.KillOnCancellation)) {
                     if (synchronously) {
-                        await sleep.RunToCompletionAsync(ProcessCompletionOptions.WaitForExit);
+                        sleep.RunToCompletion(ProcessCompletionOptions.WaitForExit);
                     } else {
                         await sleep.RunToCompletionAsync(ProcessCompletionOptions.WaitForExit);
                     }
 
+                    // Kill was requested
                     sleep.IsExited.Should().BeTrue();
+                } else {
+                    // Kill was not requested
+                    sleep.IsExited.Should().BeFalse();
                 }
             } finally {
                 cancellationTokenSource?.Dispose();
@@ -85,7 +68,7 @@ namespace Kenet.SimpleProcess.Test
         [InlineData(new object[] { false, ProcessCompletionOptions.KillOnCancellation })]
         public async Task Parallel_processes_write_eof_when_exiting_after_time(bool synchronously, ProcessCompletionOptions completionOptions)
         {
-            await Task.WhenAll(Enumerable.Range(0, 10).Select(_ => Process_writes_eof_when_exiting_after_time(synchronously, cancelledAfterMilliseconds: 15, completionOptions)));
+            await Task.WhenAll(Enumerable.Range(0, 15).Select(_ => Process_writes_eof_when_exiting_after_time(synchronously, cancelledAfterMilliseconds: 100, completionOptions)));
         }
     }
 }

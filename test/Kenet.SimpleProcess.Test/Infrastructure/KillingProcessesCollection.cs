@@ -1,8 +1,7 @@
 ﻿namespace Kenet.SimpleProcess.Test.Infrastructure
 {
-    //[CollectionDefinition(CollectionName, DisableParallelization = true)]
     [CollectionDefinition(CollectionName)]
-    public class KillingProcessesCollection : ICollectionFixture<SleepCommand>, ICollectionFixture<WriteCommand>
+    public class KillingProcessesCollection : ICollectionFixture<DummyCommand>
     {
         public const string CollectionName = "Killing Processes";
     }

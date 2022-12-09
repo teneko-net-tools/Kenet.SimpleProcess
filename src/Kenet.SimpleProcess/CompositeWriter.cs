@@ -10,7 +10,12 @@ internal class CompositeWriter
     public void Write(ReadOnlySpan<byte> bytes)
     {
         foreach (var write in _writers) {
-            write(bytes);
+            // We should not disturb other write handlers
+            try {
+                write(bytes);
+            } catch {
+                ; // Ignore on purpose
+            }
         }
     }
 }

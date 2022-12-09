@@ -1,11 +1,10 @@
-﻿using FluentAssertions;
-using Kenet.SimpleProcess.Test.Infrastructure;
-using static Kenet.SimpleProcess.Test.Infrastructure.SleepCommand;
+﻿using Kenet.SimpleProcess.Test.Infrastructure;
+using static Kenet.SimpleProcess.Test.Infrastructure.DummyCommand;
 
 namespace Kenet.SimpleProcess.Test
 {
     [Collection(KillingProcessesCollection.CollectionName)]
-    public class NeverEndingProcessCancellationTests
+    public class ProcessCancellationTests
     {
         [Theory]
         [InlineData(new object[] { true })]

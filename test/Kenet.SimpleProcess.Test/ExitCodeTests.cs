@@ -1,8 +1,6 @@
-﻿using FluentAssertions;
-
-namespace Kenet.SimpleProcess.Test
+﻿namespace Kenet.SimpleProcess.Test
 {
-    public class BadExitCodeTests
+    public class ExitCodeTests
     {
         private static SimpleProcessStartInfo CreateBadExitCodeLeadingProcessStartInfo() =>
             new("git") {

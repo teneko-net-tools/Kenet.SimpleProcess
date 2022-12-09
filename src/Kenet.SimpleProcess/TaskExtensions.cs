@@ -2,7 +2,7 @@
 
 internal static class TaskExtensions
 {
-    public static Task ContinueWithCallbackOnFailure(this Task task, Action action) =>
+    public static Task ContinueWithIfNotCompletedSuccessfully(this Task task, Action action) =>
         task.ContinueWith(
             continuedTask => {
                 if (continuedTask.IsFaulted || continuedTask.IsCanceled) {

@@ -1,6 +1,4 @@
-﻿using FluentAssertions;
-
-namespace Kenet.SimpleProcess.Test;
+﻿namespace Kenet.SimpleProcess.Test;
 
 public class GitProcessTests
 {

@@ -3,9 +3,9 @@ using System.Runtime.InteropServices;
 
 namespace Kenet.SimpleProcess.Test.Infrastructure
 {
-    public class SleepCommand : IDisposable
+    public class DummyCommand : IDisposable
     {
-        internal const string SleepProcessName = $"{nameof(Kenet)}.{nameof(Kenet.SimpleProcess)}.{nameof(Sleep)}";
+        internal const string DummyProcessName = $"{nameof(Kenet)}.{nameof(Kenet.SimpleProcess)}.{nameof(Dummy)}";
 
         private static string GetOSDependentExecutableExtension()
         {
@@ -20,12 +20,21 @@ namespace Kenet.SimpleProcess.Test.Infrastructure
             throw new NotSupportedException("Unsupported OS plattform");
         }
 
+        internal static SimpleProcessStartInfo CreateDummyStartInfo() =>
+            new(DummyProcessName + GetOSDependentExecutableExtension());
+
         internal static SimpleProcessStartInfo CreateSleepStartInfo() =>
-            new(SleepProcessName + GetOSDependentExecutableExtension());
+            CreateDummyStartInfo() with { Arguments = "sleep" };
+
+        internal static SimpleProcessStartInfo CreateWriteStartInfo() =>
+            CreateDummyStartInfo() with { Arguments = "write" };
+
+        internal static SimpleProcessStartInfo CreateErrorStartInfo() =>
+            CreateDummyStartInfo() with { Arguments = "error" };
 
         internal static void KillRemainingSleepProcesses()
         {
-            foreach (var process in Process.GetProcessesByName(SleepProcessName)) {
+            foreach (var process in Process.GetProcessesByName(DummyProcessName)) {
                 process.Kill();
                 process.Dispose();
                 Thread.Sleep(100);

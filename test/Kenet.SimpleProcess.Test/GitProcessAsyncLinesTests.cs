@@ -1,8 +1,6 @@
-﻿using FluentAssertions;
-
-namespace Kenet.SimpleProcess.Test
+﻿namespace Kenet.SimpleProcess.Test
 {
-    public class GitAsyncLinesTests
+    public class GitProcessAsyncLinesTests
     {
         private static SimpleProcessStartInfo CreateGitLogStartInfo(int numberOfCommits) => SimpleProcessStartInfo.NewBuilder("git")
             .PasteArguments("log", "--oneline", $"-{numberOfCommits}")

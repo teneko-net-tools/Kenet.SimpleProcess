@@ -1,12 +1,11 @@
 ﻿using System.Text;
-using FluentAssertions;
 using Kenet.SimpleProcess.Test.Infrastructure;
-using static Kenet.SimpleProcess.Test.Infrastructure.WriteCommand;
+using static Kenet.SimpleProcess.Test.Infrastructure.DummyCommand;
 
 namespace Kenet.SimpleProcess.Test
 {
     [Collection(KillingProcessesCollection.CollectionName)]
-    public class NeverEndingProcessEOFTests
+    public class WriteProcessEOFTests
     {
         private const int CancelAfter = 1000 * 10;
 
