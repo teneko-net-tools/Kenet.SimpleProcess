@@ -94,7 +94,7 @@ jobs:
         with:
           dotnet-version: "5.0.x"
 
-      - run: dotnet tool install --global Vernuntii.Console.GlobalTool --version 0.1.0-alpha.13
+      - run: dotnet tool install --global Vernuntii.Console.GlobalTool.win-x64 --version 0.1.0-alpha.13
 
       - name: Set semantic version from non-empty event input
         if: >
