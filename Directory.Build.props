@@ -10,6 +10,7 @@
         <LangVersion Condition="'$(LangVersion)' == ''">10.0</LangVersion>
         <RepositoryUrl>https://github.com/teneko-net-tools/Kenet.SimpleProcess</RepositoryUrl>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <PackageProjectUrl>https://github.com/teneko-net-tools/Kenet.SimpleProcess</PackageProjectUrl>
     </PropertyGroup>
 
     <ItemGroup>

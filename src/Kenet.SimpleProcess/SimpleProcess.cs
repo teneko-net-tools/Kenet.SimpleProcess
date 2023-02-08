@@ -182,7 +182,7 @@ public sealed partial class SimpleProcess :
         }
     }
 
-    private ProcessStartInfo CreateAdaptiveStartInfo()
+    private ProcessStartInfo CreateAdaptedStartInfo()
     {
         var startInfo = StartInfo.CreateProcessStartInfo();
         startInfo.UseShellExecute = false;
@@ -209,7 +209,7 @@ public sealed partial class SimpleProcess :
             return;
         }
 
-        var newProcess = new Process { StartInfo = CreateAdaptiveStartInfo() };
+        var newProcess = new Process { StartInfo = CreateAdaptedStartInfo() };
 
         if (Interlocked.CompareExchange(ref _process, newProcess, null) == null) {
             process = newProcess;
